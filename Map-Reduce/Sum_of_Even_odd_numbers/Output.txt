@@ -1,0 +1,8 @@
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop jar /Users/dibyajyoti/Desktop/OddEvenNew.jar   org.hadoop.learning.MyOddEvenDriver
+2020-11-24 16:24:10,218 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop fs -cat /user/resources/evenoddOutput/part-r-00000
+2020-11-24 16:24:23,113 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+EVEN	559536
+ODD	529462
