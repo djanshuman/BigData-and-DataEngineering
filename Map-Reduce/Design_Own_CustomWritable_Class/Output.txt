@@ -1,0 +1,22 @@
+#We are not passing Input and output path as we have hardcoded the path in our DriverClass
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop fs -mkdir /user/resources/CustomInputDataSet/
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop fs -put /Users/dibyajyoti/Downloads/word_count.txt /user/resources/CustomInputDataSet/
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop jar /Users/dibyajyoti/Desktop/CustomWritable.jar org.hadoop.learning.CustomWritableClass.MyDriver
+2020-11-25 00:16:41,310 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop fs -ls /user/resources/CustomClassOutput/
+2020-11-25 00:17:17,475 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Found 2 items
+-rw-r--r--   1 dibyajyoti supergroup          0 2020-11-25 00:16 /user/resources/CustomClassOutput/_SUCCESS
+-rw-r--r--   1 dibyajyoti supergroup         52 2020-11-25 00:16 /user/resources/CustomClassOutput/part-r-00000
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop fs -cat /user/resources/CustomClassOutput/part-r-00000
+2020-11-25 00:17:33,275 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+frank	7
+john	8
+kuoa	4
+lexa	1
+lupa	3
+smith	1
+steve	5
