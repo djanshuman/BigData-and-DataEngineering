@@ -1,0 +1,19 @@
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop jar /Users/dibyajyoti/Desktop/FBSuccRate.jar   org.hadoop.learning.SuccessRate.Facebook.MyDriver /user/resources/FbInput/ /user/resources/FbOutput
+
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop fs -cat /user/resources/FbOutput/part-r-00000
+2020-11-24 19:08:33,669 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Ecommerce	Delhi,9.959075602228252
+Ecommerce	Mumbai,21.70423092131277
+Ecommerce	Hyderabad,3.7405241539525353
+Ecommerce	Bangalore,3.264700694344221
+Education	Delhi,3.7862362817507034
+Education	Hyderabad,2.0242914979757085
+Fitness	Delhi,5.947396558341087
+Fitness	Mumbai,1.834862385321101
+Fitness	Hyderabad,4.934546750311793
+Fitness	Bangalore,12.782362257230977
+Health	Delhi,3.055658587111336
+Health	Mumbai,2.742759599081902
+Health	Hyderabad,6.338267305260219
+Health	Bangalore,1.8306636155606408
