@@ -1,0 +1,109 @@
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -mkdir /user/resources/MultipleOutputClass_InputFile/
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -put /Users/dibyajyoti/Downloads/Multiple_outputs/mo.txt /user/resources/MultipleOutputClass_InputFile/
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -ls /user/resources/MultipleOutputClass_InputFile/
+WARNING: Use of this script to execute dfs is deprecated.
+WARNING: Attempting to execute replacement "hdfs dfs" instead.
+
+2020-11-26 23:56:26,454 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Found 1 items
+-rw-r--r--   1 dibyajyoti supergroup      15519 2020-11-26 23:56 /user/resources/MultipleOutputClass_InputFile/mo.txt
+
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop jar /Users/dibyajyoti/Desktop/MultipleOutputClass.jar org.hadoop.learning.MultipleOutputClass.MyDriver
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -ls /user/resources/MultipleOutputClass*
+WARNING: Use of this script to execute dfs is deprecated.
+WARNING: Attempting to execute replacement "hdfs dfs" instead.
+
+2020-11-27 00:20:05,229 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Found 1 items
+-rw-r--r--   1 dibyajyoti supergroup      15519 2020-11-26 23:56 /user/resources/MultipleOutputClass_InputFile/mo.txt
+Found 4 items
+-rw-r--r--   1 dibyajyoti supergroup       1925 2020-11-27 00:12 /user/resources/MultipleOutputClass_OutputFile/Accounts-r-00000
+-rw-r--r--   1 dibyajyoti supergroup       1861 2020-11-27 00:12 /user/resources/MultipleOutputClass_OutputFile/HR-r-00000
+-rw-r--r--   1 dibyajyoti supergroup          0 2020-11-27 00:12 /user/resources/MultipleOutputClass_OutputFile/_SUCCESS
+-rw-r--r--   1 dibyajyoti supergroup          0 2020-11-27 00:12 /user/resources/MultipleOutputClass_OutputFile/part-r-00000
+
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -cat /user/resources/MultipleOutputClass_OutputFile/HR-r-00000
+WARNING: Use of this script to execute dfs is deprecated.
+WARNING: Attempting to execute replacement "hdfs dfs" instead.
+
+2020-11-27 00:13:13,779 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+AAMK174558	Miharu,14178.0
+ALUE856845	Ernesto,16578.0
+BLBC473235	Juan,8406.0
+BQJN686628	Lili,15516.0
+BWBF204361	Hanna,15474.0
+CQYA848458	Ayumi,16119.0
+CXBX164708	Wendy,7359.0
+DDGS104265	Nicholas,7614.0
+DJPX255251	Arthur,19791.0
+DTOD918580	Etsuko,9321.0
+DWIY714302	Claudette,11658.0
+EBEV617101	Helene,7749.0
+EJEK417982	Jeanne,20394.0
+EQEI440601	Bret,21009.0
+EUGR780763	Emi,17115.0
+FKNJ636726	Kyle,19416.0
+FPGC679939	Fabian,15273.0
+GAQW160679	Walter,9864.0
+GXYA988263	Gaston,16542.0
+GYXZ333754	Isaac,10062.0
+HVPF982709	Isabel,9843.0
+IMKY800717	Sachiko,11592.0
+JAIY681428	Fay,19662.0
+JALK399580	Mindy,18147.0
+JSPX771476	Bill,9312.0
+JYNJ647367	Nadine,8058.0
+KIWM649293	Michiyo,13431.0
+KIZO821170	Dolly,17241.0
+KOOU621650	Humberto,18714.0
+KQIH903301	Erin,8838.0
+LHBZ120856	Miyuki,18396.0
+LJHJ408258	Richard,11604.0
+LLFJ161471	William,6690.0
+LUWU764287	Arlene,20244.0
+LYWT464443	Sebastien,16044.0
+MGPX781117	Sayuri,12957.0
+MKTR367909	Mieko,10932.0
+NLLU684817	Lisa,9048.0
+NQQZ234449	Gordon,14034.0
+NVDU788301	Odette,13638.0
+NZIE829817	Hermine,16935.0
+OAAH245725	Sam,15051.0
+PLMN398674	Ivan,7413.0
+PNFV671876	Karl,16893.0
+QADE591238	Marco,18075.0
+QGZH727123	Hitomi,16518.0
+QHUR325258	Danny,14088.0
+QXPJ690600	Rose,13557.0
+QYXM264283	Chiaki,16752.0
+QZDH622442	Alex,15540.0
+RCOC757827	Wilfred,17814.0
+RYUK992407	Peter,12942.0
+SKSD458946	Michelle,8799.0
+SMWZ569416	Nana,17679.0
+SQNA179759	Michael,10032.0
+SXNI647653	Dean,20325.0
+TEQW825350	Chris,18456.0
+TZNW577798	Aki,14745.0
+UAEI686571	Earl,16062.0
+UMTL102948	Josephine,16587.0
+UVQV600849	Gert,12954.0
+VGSU923978	Tammy,16566.0
+VWWC911104	Otto,7983.0
+WGFX445802	Iris,16863.0
+WNNM141163	Philippe,8712.0
+WXSS699575	Miyako,11064.0
+XNCJ749268	Rafael,18993.0
+YCZF846266	Naoko,8118.0
+YGDE441507	Lee,16743.0
+YUGO481591	Kazuko,7446.0
+YZLA499352	Miwa,8925.0
+ZRQV139732	Henri,18780.0
+ZTZB591562	Ana,20154.0
+ZWTE426837	Larry,15603.0
+
