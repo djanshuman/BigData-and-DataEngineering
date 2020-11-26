@@ -14,7 +14,7 @@ import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 public class MyDriver {
 
 	public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException{
-		
+		//Dataset input is present in git as mo.txt
 		Configuration c = new Configuration();
 		Path inputpath = new Path("hdfs://localhost:8020/user/resources/MultipleOutputClass_InputFile");
 		Path outputdir= new Path("hdfs://localhost:8020/user/resources/MultipleOutputClass_OutputFile");
