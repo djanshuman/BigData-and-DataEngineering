@@ -1,0 +1,25 @@
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -mkdir hdfs://localhost:8020/user/resources/OuterJoinReduceSideInput1/
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -mkdir hdfs://localhost:8020/user/resources/OuterJoinReduceSideInput2/
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -mkdir hdfs://localhost:8020/user/resources/OuterJoinReduceSideOutput/
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -put /Users/dibyajyoti/Downloads/outerjoin/employee hdfs://localhost:8020/user/resources/OuterJoinReduceSideInput1/
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -put /Users/dibyajyoti/Downloads/outerjoin/dept.txt  hdfs://localhost:8020/user/resources/OuterJoinReduceSideInput2/
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop jar /Users/dibyajyoti/Desktop/OuterJoinReduceSide.jar org.hadoop.learning.OuterJoinReduceSide.MyDriver
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -cat hdfs://localhost:8020/user/resources/OuterJoinReduceSideOutput/part-r-00000
+WARNING: Use of this script to execute dfs is deprecated.
+WARNING: Attempting to execute replacement "hdfs dfs" instead.
+
+2020-11-27 20:08:27,699 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+10	1781 John Developer 6500 1681 INVENTORY HYDERABAD
+10	1681 Mira Mgr 5098 1481 INVENTORY HYDERABAD
+10	1481 flink Mgr 9580 1681 INVENTORY HYDERABAD
+10	1281 Shawn Architect 7890 1481 INVENTORY HYDERABAD
+20	1381 Jacob Admin 4560 1481 ACCOUNTS PUNE
+30	null_value  null_value null_value null_value null_value DEVELOPMENT CHENNAI
+40	1581 Richard Developer 1000 1681 null_value null_value
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ 
