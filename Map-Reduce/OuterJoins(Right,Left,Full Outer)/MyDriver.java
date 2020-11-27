@@ -8,6 +8,7 @@ import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
+// Input dataset is present in Input Directory. File name :employee.txt , dept.txt
 public class MyDriver {
 
 	public static void main (String [] args) throws IOException , InterruptedException, ClassNotFoundException{
