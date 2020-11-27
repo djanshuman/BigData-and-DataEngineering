@@ -1,0 +1,21 @@
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -mkdir hdfs://localhost:8020/user/resources/InnerJoinReduceSideInput1/
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -mkdir hdfs://localhost:8020/user/resources/InnerJoinReduceSideInput2/
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -mkdir hdfs://localhost:8020/user/resources/InnerJoinReduceSideOutput/
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -put /Users/dibyajyoti/Desktop/employee.txt hdfs://localhost:8020/user/resources/InnerJoinReduceSideInput1/
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -put /Users/dibyajyoti/Desktop/address.txt hdfs://localhost:8020/user/resources/InnerJoinReduceSideInput2/
+
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop jar /Users/dibyajyoti/Desktop/InnerJoinReduceSide.jar org.hadoop.learning.InnerJoinReduceSide.MyDriver
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -cat hdfs://localhost:8020/user/resources/InnerJoinReduceSideOutput/part-r-00000
+WARNING: Use of this script to execute dfs is deprecated.
+WARNING: Attempting to execute replacement "hdfs dfs" instead.
+
+2020-11-27 13:23:08,202 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+1	JACK,PARIS
+2	SIMON,ROME
+3	MARTIN,MUMBAI
+4	MARRY,DELHI
+5	JOHN,LONDON
+
