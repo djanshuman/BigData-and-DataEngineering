@@ -1,0 +1,29 @@
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop fs -mkdir hdfs://localhost:8020/user/resources/CustomCounterInput/
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop fs -mkdir hdfs://localhost:8020/user/resources/CustomCounterOutput/
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop fs -put /Users/dibyajyoti/Downloads/counters_new/counter.txt hdfs://localhost:8020/user/resources/CustomCounterInput/
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop jar /Users/dibyajyoti/Desktop/CustomCounter.jar org.hadoop.learning.CustomCounters.MyDriver
+
+	SALES
+		HIGH_SALES=41
+		LOW_SALES=70
+	org.hadoop.learning.CustomCounters.Location
+		BANGALORE=40
+		CHENNAI=54
+		HYDERABAD=57
+		TOTAL=151
+    
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -cat hdfs://localhost:8020/user/resources/CustomCounterOutput/part-r-00000
+WARNING: Use of this script to execute dfs is deprecated.
+WARNING: Attempting to execute replacement "hdfs dfs" instead.
+
+2020-11-30 16:46:50,801 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Bangalore	11733
+Chennai	19202
+Hyderabad	18781
+
+    
+    
+    
