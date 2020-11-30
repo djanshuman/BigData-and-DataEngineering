@@ -1,0 +1,6 @@
+1. total records processed by mapper.
+2. total records processed by each store location
+3. records where no of sales < 10
+4. no of records where (no of sales*product price > 500)
+5. total revenue for each store location for all products.
+
