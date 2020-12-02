@@ -1,0 +1,24 @@
+We have a XML file to read and create key,value pairs for mapper. In Normal TextInputFomat class we take the byte offset as key and entire text line
+as the value and pass the splits to various mappers.
+But in XML file we have start and end tags as well as each line is bounded by tags. If we process them using default TextInputFormat class then
+each line will be a separate key,value but generate different key value pairs which is equal to number of lines in input file.
+
+Example:
+<MOVIES>
+<MOVIE_NAME>Titanic</MOVIE_NAME>
+<ACTOR1>Leonardo Di Caprio</ACTOR1>
+<ACTOR2>Kate Winslet</ACTOR2>
+<GENRE>Drama</GENRE>
+<RATINGS>7.7</RATINGS>
+<YEAR>1997</YEAR>
+</MOVIES>
+
+In above example if we parse using default format then it will produce as below:
+0  <MOVIES>
+8 <MOVIE_NAME>Titanic</MOVIE_NAME>
+so on...
+
+But our requirement is as below:
+0	Titanic,Leonardo Di Caprio,Kate Winslet,Drama,7.7,1997
+
+So we have to create our own InputFormatClass to parse the dataset. Based on usecase the InputFormat class will vary.
