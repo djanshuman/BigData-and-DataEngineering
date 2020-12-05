@@ -20,7 +20,7 @@ public class MyDriver {
 		
 		
 		Configuration c= new Configuration();
-		Path inputpath= new Path("hdfs://localhost:8020/user/resources/wordCountInput/word_count.txt");
+		Path inputpath= new Path("hdfs://localhost:8020/user/resources/wordCountInput/word_count_ChainMapperProgram.txt");
 		Path outputpath= new Path("hdfs://localhost:8020/user/resources/wordCountOutput");
 		Job j = Job.getInstance(c,"MyDriver");
 		
