@@ -1,5 +1,5 @@
 Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -mkdir  hdfs://localhost:8020/user/resources/wordCountInput/
-Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -put /Users/dibyajyoti/Desktop/word_count.txt hdfs://localhost:8020/user/resources/wordCountInput/
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -put /Users/dibyajyoti/Desktop/word_count_ChainMapperProgram.txt hdfs://localhost:8020/user/resources/wordCountInput/
 
 
 Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop jar /Users/dibyajyoti/Desktop/ChainMapper.jar org.hadoop.learning.ChainMapper.MyDriver
