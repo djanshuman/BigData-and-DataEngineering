@@ -1,0 +1,21 @@
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -mkdir  hdfs://localhost:8020/user/resources/wordCountInput/
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -put /Users/dibyajyoti/Desktop/word_count.txt hdfs://localhost:8020/user/resources/wordCountInput/
+
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop jar /Users/dibyajyoti/Desktop/ChainMapper.jar org.hadoop.learning.ChainMapper.MyDriver
+2020-12-06 00:26:13,294 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2020-12-06 00:26:14,415 INFO impl.MetricsConfig: Loaded properties from hadoop-metrics2.properties
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -cat hdfs://localhost:8020/user/resources/wordCountOutput/part-r-00000
+WARNING: Use of this script to execute dfs is deprecated.
+WARNING: Attempting to execute replacement "hdfs dfs" instead.
+
+2020-12-06 00:26:22,416 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+frank	7
+john	8
+kuoa	4
+lexa	1
+lupa	3
+smith	1
+steve	5
+
