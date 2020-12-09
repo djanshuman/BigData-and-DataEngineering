@@ -1,0 +1,24 @@
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -mkdir hdfs://localhost:8020/user/resources/BankLoyalCustomer_AccountInput/
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -mkdir hdfs://localhost:8020/user/resources/BankLoyalCustomer_PersonInput/
+
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -put /Users/dibyajyoti/Downloads/bank_loyal_customers/account.txt hdfs://localhost:8020/user/resources/BankLoyalCustomer_AccountInput/
+WARNING: Use of this script to execute dfs is deprecated.
+
+hadooDibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -put /Users/dibyajyoti/Downloads/bank_loyal_customers/person.txt hdfs://localhost:8020/user/resources/BankLoyalCustomer_PersonInput/
+WARNING: Use of this script to execute dfs is deprecated.
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop jar /Users/dibyajyoti/Desktop/BankLoyalCustomer.jar org.hadoop.learning.BankLoyalCustomer.MyDriver
+2020-12-09 13:35:04,281 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -cat hdfs://localhost:8020/user/resources/BankLoyalCustomer_Output/part-r-00000
+WARNING: Use of this script to execute dfs is deprecated.
+WARNING: Attempting to execute replacement "hdfs dfs" instead.
+
+2020-12-09 13:35:40,864 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+KGNZ630334NA	Arlene,Adkins,1366578552,13215.0
+OBIC304336IX	Bret,Allen,1400967582,17233.0
+OMOI808692OZ	Allison,Abbott,1245015582,15263.0
+POOH283211OT	Alex,Adams,1113028282,11685.0
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ 
