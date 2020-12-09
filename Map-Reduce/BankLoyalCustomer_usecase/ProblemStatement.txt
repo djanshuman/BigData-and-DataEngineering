@@ -1,0 +1,7 @@
+Find out bank loyal customers scenario.
+
+Conditions:
+1. He must not be reported as defaulter in quarterly deposit and indicator flag should be "no".
+2. Withdraw amount for each quarter should be less than half the deposit of each quarter.
+3. Total deposit of the account holder should be greater than 10k for all quarters.
+
