@@ -1,0 +1,14 @@
+The UseCase is to predict Churning customers for a Food Order App.
+Conditions as below:
+
+The Customer is going to Churn iff:
+
+1. The no of bookings are declining continuously for 3 consecutive months.
+2. Each month orders are less than 50% of previous month:
+
+  JUNE 100 
+  JULY 30      < 50% OF JUNE
+  AUGUST 10    < 50% JULY
+  SEPTEMBER 2  < 50% AUGUST
+  
+3. Capture the feedback details for the customers whose rating is <=3 and whichever feedback is more is number i.e the reason for churning.
