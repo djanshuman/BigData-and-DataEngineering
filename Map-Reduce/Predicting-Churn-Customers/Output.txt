@@ -1,0 +1,16 @@
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -mkdir hdfs://localhost:8020/user/resources/ChurnCustomerInput/
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -put /Users/dibyajyoti/Downloads/food_2/food.txt hdfs://localhost:8020/user/resources/ChurnCustomerInput/
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -ls hdfs://localhost:8020/user/resources/ChurnCustomerInput/
+
+-rw-r--r--   1 dibyajyoti supergroup      83017 2020-12-10 23:44 hdfs://localhost:8020/user/resources/ChurnCustomerInput/food.txt
+
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop jar /Users/dibyajyoti/Desktop/ChurnCustomerDetection.jar org.hadoop.learning.ChurnCustomerDetection.MyDriver
+
+Dibyajyotis-MacBook-Air:hadoop dibyajyoti$ hadoop dfs -cat hdfs://localhost:8020/user/resources/ChurnCustomerOutput/part-r-00000
+2020-12-11 00:49:39,256 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+FSAM929386AQ	Late delivery
+JXJY167254JK	Late delivery
+UFDF355524DM	High price
