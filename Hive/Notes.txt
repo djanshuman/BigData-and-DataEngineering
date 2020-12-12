@@ -1,0 +1,1403 @@
+CREATE EXTERNAL TABLE `table5`(
+  `col1` int, 
+  `col2` array<string>, 
+  `col3` string, 
+  `col4` int)
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe' 
+WITH SERDEPROPERTIES ( 
+  'collection.delim'=':', 
+  'field.delim'=',', 
+  'line.delim'='\n', 
+  'serialization.format'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  'hdfs://localhost:8020/user/hive/warehouse/d2.db/table5'
+TBLPROPERTIES (
+  'bucketing_version'='2', 
+  'transient_lastDdlTime'='1605551646');
+
+
+load data local inpath '/Users/dibyajyoti/Downloads/table1.txt/' into table table5;
+
+insert overwrite table table6 select col1,col2,col3 from table2 where col3='Wales'
+insert into table table6 select col1,col2,col3 from table2;
+
+hive (d2)> from table2 insert overwrite table table6 select col1,col2,col3 where col3='England' insert overwrite table table7 select col1,col2,col3  where col3='Wales';
+
+
+hive (d2)> desc table8;
+OK
+col_name	data_type	comment
+col1                	int                 	                    
+col2                	array<string>       	                    
+col3                	string            
+
+hive (d2)> set hive.metastore.disallow.incompatible.col.type.changes=false;
+hive (d2)> alter table table8 change col1 col1 int after col2;
+OK
+Time taken: 0.336 seconds
+hive (d2)> desc table8;
+OK
+col_name	data_type	comment
+col2                	array<string>       	                    
+col1                	int                 	                    
+col3                	string              	                    
+Time taken: 0.187 seconds, Fetched: 3 row(s)
+
+
+hive (d2)> set hive.metastore.disallow.incompatible.col.type.changes=true;
+hive (d2)> alter table table8 change col1 col_new string;
+OK
+Time taken: 0.494 seconds
+hive (d2)> desc table8;
+OK
+col_name	data_type	comment
+col2                	array<string>       	                    
+col_new             	string              	                    
+col3                	string              	   
+
+hive (d2)> alter table table8 add columns(newcol string);
+OK
+Time taken: 0.343 seconds
+hive (d2)> desc table8;
+OK
+col_name	data_type	comment
+col2                	array<string>       	                    
+col_new             	string              	                    
+col3                	string              	                    
+newcol              	string      
+
+
+hive (d2)> alter table table9 replace columns(empid Int, name string);
+OK
+Time taken: 0.157 seconds
+hive (d2)> select * from table9;
+OK
+table9.empid	table9.name
+Time taken: 0.267 seconds
+
+hive (d2)> alter table table9 set FileFormat avro;
+OK
+
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.avro.AvroSerDe	 
+InputFormat:        	org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+
+
+hive (d2)> alter table table9 set tblproperties('auto.purge'='true');
+OK
+Time taken: 0.226 seconds
+
+Table Parameters:	 	 
+	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\",\"COLUMN_STATS\":{\"col1\":\"true\",\"col2\":\"true\",\"col3\":\"true\"}}
+	auto.purge          	true                
+	bucketing_version   	2                   
+	last_modified_by    	dibyajyoti      
+	
+
+Sorting in Hive:
+1.ORDER BY : Uses single reducer to order a particular column. Always preferred to use a limit clause with order by
+since the single reducer is used and gb's,pb's data might take so much time in sorting and producing output.
+
+hive (d2)> select * from table2 order by col1 desc limit 3;
+table2.col1	table2.col2	table2.col3	table2.col4
+504	["Stockport","GBR"]	England	132813
+503	["PrestON","GBR"]	England	135000
+502	["Newport","GBR"]	Wales	139000
+
+2.SORT BY : Doesn't guarantee full sort of data. Data is sorted only within a reducer. There can be n number of reducer's
+so final output is the sorted output of each reducer output. If same key was passed as input to multiple
+reducers then in final output it will appear twice in sort by.
+
+3.DISTRIBUTE BY : It ensures non-overlapping keys in reducers. It distributes keys in such a way that all values of a key
+goes to same reducer. So we wont have any duplicates in reducer level. it doesn't do sorting. 
+We have to use sort by with distribute to get sorted output from each reducer.
+Again the final output is not sorted. To get final output use order by with distribute by.
+
+4.CLUSTER BY : it is short form of distribute by sort by. 
+
+
+hive (d2)> select explode(col2) as newcol from table2;
+OK
+newcol
+Poole
+GBR
+Blackburn
+GBR
+Bolton
+GBR
+Newport
+GBR
+PrestON
+GBR
+Stockport
+GBR
+
+
+
+hive (d2)> select col1,city_name from table2 lateral view explode(col2) city as city_name;
+OK
+col1	city_name
+499	Poole
+499	GBR
+501	Blackburn
+501	GBR
+500	Bolton
+500	GBR
+502	Newport
+502	GBR
+503	PrestON
+503	GBR
+504	Stockport
+504	GBR
+
+
+hive (d2)> select key,value from table2 lateral view explode(col2) newtbl as key,value;
+
+RANK() and DENSE_RANK() works within an ordered partition only.
+In RANK() the in case of ties the next rank is skipped whereas in DENSE_RANK() the ranks are consecutive and not skipped.
+
+ROW_NUMBER() assigns unique rank to each row and they are useful in finding out top2,3 values in a dataset.
+We can use partition by along with all 3 functions where it applies the func inside the partition only
+so each individual partition ordering/ranking is applied not on whole dataset output.
+
+
+select empid,name,rank() over(order by empid) as new_rank from table9;
+empid	name	new_rank
+1	luka	1
+3	dov	2
+3	lil	2
+5	tri	4
+10	dov	5
+88	xdr	6
+90	tri	7
+100	crt	8
+120	bil	9
+134	Crick	10
+
+
+select name,empid,dense_rank() over(order by empid) as new_rank from table9;
+name	empid	new_rank
+luka	1	1
+lil	3	2
+dov	3	2
+tri	5	3
+dov	10	4
+ryan	10	4
+cedwick	88	5
+xdr	88	5
+tri	90	6
+crt	100	7
+bil	120	8
+ryan	120	8
+Crick	134	9
+
+
+
+select name,empid,dense_rank() over(partition by name order by empid) as new_rank from table9;
+
+name	empid	new_rank
+Crick	134	1
+bil	120	1
+cedwick	88	1
+crt	100	1
+dov	3	1
+dov	10	2
+lil	3	1
+luka	1	1
+ryan	10	1
+ryan	120	2
+tri	5	1
+tri	90	2
+xdr	88	1
+
+select name,empid,row_number() over(partition by name order by empid desc) as new_rank from table9;
+name	empid	new_rank
+Crick	134	1
+bil	120	1
+bil	34	2
+bill	23	1
+cedwick	88	1
+cedwick	76	2
+crt	100	1
+dov	10	1
+dov	3	2
+lil	3	1
+luka	1	1
+ryan	120	1
+ryan	10	2
+tri	90	1
+tri	5	2
+xdr	88	1
+
+select name,empid,dense_rank() over(partition by name order by empid desc) as new_rank from table9;
+name	empid	new_rank
+Crick	134	1
+bil	120	1
+bil	34	2
+bill	23	1
+cedwick	88	1
+cedwick	76	2
+crt	100	1
+dov	10	1
+dov	3	2
+lil	3	1
+luka	1	1
+ryan	120	1
+ryan	10	2
+tri	90	1
+tri	5	2
+xdr	88	1
+
+
+hive (d2)> select * from table2;
+OK
+table2.col1	table2.col2	table2.col3	table2.col4
+499	["Poole","GBR"]	England	141000
+501	["Blackburn","GBR"]	England	140000
+500	["Bolton","GBR"]	England	139020
+502	["Newport","GBR"]	Wales	139000
+503	["PrestON","GBR"]	England	135000
+504	["Stockport","GBR"]	England	132813
+
+
+create table part_table2 (col1 int,col2 array<string>, col4 int) partitioned by(col3 string) row format delimited fields terminated by ',' lines terminated by '\n'
+stored as textfile;
+
+hive (d2)> insert into table part_table2 partition(col3) select col1,col2,col4 from table2 where col3='England';
+
+
+hive (d2)> select * from part_table2;
+OK
+part_table2.col1	part_table2.col2	part_table2.col4	part_table2.col3
+499	["Poole","GBR"]	141000	England
+501	["Blackburn","GBR"]	140000	England
+500	["Bolton","GBR"]	139020	England
+503	["PrestON","GBR"]	135000	England
+504	["Stockport","GBR"]	132813	England
+Time taken: 0.249 seconds, Fetched: 5 row(s)
+hive (d2)> desc part_table2;
+OK
+col_name	data_type	comment
+col1                	int                 	                    
+col2                	array<string>       	                    
+col4                	int                 	                    
+col3                	string              	                    
+	 	 
+# Partition Information	 	 
+# col_name            	data_type           	comment             
+col3                	string              	                    
+Time taken: 0.199 seconds, Fetched: 8 row(s)
+hive (d2)> 
+
+static partition:
+
+hive (d2)> insert into table part_table2 partition(col3) select col1,col2,col4,col3 from table2 where col3='Wales';
+
+hive (d2)> dfs -ls hdfs://localhost:8020/user/hive/warehouse/d2.db/part_table2;
+Found 2 items
+drwxr-xr-x   - dibyajyoti supergroup          0 2020-11-17 14:34 hdfs://localhost:8020/user/hive/warehouse/d2.db/part_table2/col3=England
+drwxr-xr-x   - dibyajyoti supergroup          0 2020-11-17 14:36 hdfs://localhost:8020/user/hive/warehouse/d2.db/part_table2/col3=Wales
+
+
+Note: partitioning column should be kept at last in insert/select query while loaidng data.
+
+Dynamic partition:
+
+create table part_table10 (col1 int,col2 array<string>, col4 int) partitioned by(col3 string) row format delimited fields terminated by ',' lines terminated by '\n'
+stored as textfile;
+
+insert into table part_table10 partition(col3) select col1,col2,col4,col3 from table2;
+
+OK
+part_table10.col1	part_table10.col2	part_table10.col4	part_table10.col3
+499	["Poole","GBR"]	141000	England
+501	["Blackburn","GBR"]	140000	England
+500	["Bolton","GBR"]	139020	England
+503	["PrestON","GBR"]	135000	England
+504	["Stockport","GBR"]	132813	England
+502	["Newport","GBR"]	139000	Wales
+
+	drwxr-xr-x	dibyajyoti	supergroup	0 B	Nov 17 14:42	0	0 B	col3=England	
+	drwxr-xr-x	dibyajyoti	supergroup	0 B	Nov 17 14:42	0	0 B	col3=Wales	
+
+Static partitioning is fast as data of value of column is pre-known. But manual as we have to load manually
+to partitioned table based on known column value. It is good where less number of partitions to be created
+and less unique values.
+Dynamic partitioning is useful where column values are unexpected and not known to us. It is slow as
+hive itself makes comparison before loading data to table.
+
+
+
+Bucketing
+
+hive (d2)> create table if not exists buck_dept(depntno int,empname string,sal int,location string) partitioned by (deptname string) clustered by (location) into 4 buckets
+         > row format delimited fields terminated by ',' lines terminated by '\n' stored as textfile;
+         
+ insert into table buck_dept partition(deptname) select deptno,empname,sal,location,deptname from part_dept;
+
+Query ID = dibyajyoti_20201119155614_62b24623-7e8d-42d2-a19e-517f06ecdfe5
+Total jobs = 2
+Launching Job 1 out of 2
+Number of reduce tasks determined at compile time: 4
+ 
+ hive (d2)> dfs -ls hdfs://localhost:8020/user/hive/warehouse/d2.db/buck_dept
+         > ;
+Found 4 items
+drwxr-xr-x   - dibyajyoti supergroup          0 2020-11-19 15:56 hdfs://localhost:8020/user/hive/warehouse/d2.db/buck_dept/deptname=Accounts
+drwxr-xr-x   - dibyajyoti supergroup          0 2020-11-19 15:56 hdfs://localhost:8020/user/hive/warehouse/d2.db/buck_dept/deptname=HR
+drwxr-xr-x   - dibyajyoti supergroup          0 2020-11-19 15:56 hdfs://localhost:8020/user/hive/warehouse/d2.db/buck_dept/deptname=Marketing
+drwxr-xr-x   - dibyajyoti supergroup          0 2020-11-19 15:56 hdfs://localhost:8020/user/hive/warehouse/d2.db/buck_dept/deptname=Sales
+
+
+CREATE TABLE `part_dept`(
+  `deptno` int, 
+  `empname` string, 
+  `sal` int, 
+  `location` string)
+PARTITIONED BY ( 
+  `deptname` string)
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe' 
+WITH SERDEPROPERTIES ( 
+  'field.delim'=',', 
+  'line.delim'='\n', 
+  'serialization.format'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  'hdfs://localhost:8020/user/hive/warehouse/d2.db/part_dept'
+TBLPROPERTIES (
+  'bucketing_version'='2', 
+  'transient_lastDdlTime'='1605637674')
+
+CREATE TABLE `buck_dept`(
+  `depntno` int, 
+  `empname` string, 
+  `sal` int, 
+  `location` string)
+PARTITIONED BY ( 
+  `deptname` string)
+CLUSTERED BY ( 
+  location) 
+INTO 4 BUCKETS
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe' 
+WITH SERDEPROPERTIES ( 
+  'field.delim'=',', 
+  'line.delim'='\n', 
+  'serialization.format'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  'hdfs://localhost:8020/user/hive/warehouse/d2.db/buck_dept'
+TBLPROPERTIES (
+  'bucketing_version'='2', 
+  'transient_lastDdlTime'='1605781251')
+
+Table sampling is efficient and always preferred if done in bucketed column. In  this way hive will avoid full scan
+and directly fetch records from bucketed files location.
+
+select * from buck_dept tablesample (bucket 1 out of 2 on location); -> If table was 4 buckets. It will divide each bucket
+into 2 groups each and pick 1st bucket. To get less result we can increase the count like 2 out of 3 etc.
+
+select * from buck_dept tablesample (2 percent); Atleast 2 percent
+
+select * from buck_dept tablesample (20 rows); -> 20 rows from each input split.
+select * from buck_dept tablesample (1M); --> fetch 1MB record. if table size is less than it will fetch
+entire record set.
+
+Drop and offline:
+
+ALTER TABLE <TABLE_NAME> ENABLE OFFLINE;
+ALTER TABLE <TABLE_NAME> PARTITION(DEPTNAME='HR') ENABLE OFFLINE;
+
+ALTER TABLE <TABLE_NAME> ENABLE NO_DROP;
+ALTER TABLE <TABLE_NAME> PARTITION(DEPTNAME='HR') ENABLE NO_DROP;
+
+Similarly DISABLE it.
+
+CREATE TABLE DEMO1(CUST_ID STRING,ODR_DATE STRING,SHIPDT STRING,COURIER STRING,RECVD_DT STRING,RETURNED_OR_NOT BOOLEAN,RETURNED_DT STRING,REASON_OF_RETURN STRING) 
+partitioned by (cust_name STRING)
+ ROW format DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' stored as textfile;
+
+1.TABLE1:
+
+CREATE TABLE DEMO2(CUST_ID STRING,CUST_NAME STRING,ODR_DATE STRING,SHIPDT STRING,COURIER STRING,RECVD_DT STRING,RETURNED_OR_NOT STRING,
+RETURNED_DT STRING,REASON_OF_RETURN STRING) 
+ROW format DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' stored as textfile
+tblproperties ("skip.header.line.count"="2");
+
+2. LOAD
+
+LOAD DATA LOCAL INPATH '/Users/dibyajyoti/Downloads/assignment_create_table_2018.txt' INTO TABLE DEMO2;
+
+3. CREATE PARTITION TABLE2
+
+CREATE TABLE DEMO_PART(CUST_ID STRING,ODR_DATE STRING,SHIPDT STRING,COURIER STRING,RECVD_DT STRING,RETURNED_OR_NOT STRING,RETURNED_DT STRING,REASON_OF_RETURN STRING) 
+PARTITIONED BY (CUST_NAME STRING)
+ROW format DELIMITED FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' stored as textfile;
+
+4. LOAD DATA TO T2 FROM T1
+
+STATIC PARTITION
+INSERT INTO TABLE DEMO_PART SELECT CUST_ID,ODR_DATE,SHIPDT,COURIER,RECVD_DT,RETURNED_OR_NOT,RETURNED_DT,REASON_OF_RETURN,CUST_NAME FROM DEMO2 WHERE CUST_NAME='Rebekah';
+
+DYNAMIC PARTITION
+INSERT INTO TABLE DEMO_PART PARTITION(CUST_NAME)SELECT CUST_ID,ODR_DATE,SHIPDT,COURIER,RECVD_DT,RETURNED_OR_NOT,RETURNED_DT,REASON_OF_RETURN,CUST_NAME FROM DEMO2;
+
+INSERT INTO TABLE DEMO_PART PARTITION(CUST_NAME)SELECT CUST_ID,ODR_DATE,SHIPDT,COURIER,RECVD_DT,RETURNED_OR_NOT,RETURNED_DT,REASON_OF_RETURN,CUST_NAME FROM DEMO2;
+INSERT OVERWRITE TABLE DEMO_PART PARTITION(CUST_NAME)SELECT CUST_ID,ODR_DATE,SHIPDT,COURIER,RECVD_DT,RETURNED_OR_NOT,RETURNED_DT,REASON_OF_RETURN,CUST_NAME FROM DEMO2;
+
+hive (d2)> show partitions DEMO_PART;
+OK
+partition
+cust_name=Alex
+cust_name=Allison
+cust_name=Ana
+cust_name=Arthur
+cust_name=Chris
+cust_name=Cristobal
+cust_name=Danny
+cust_name=Dean
+cust_name=Dennis
+cust_name=Irene
+cust_name=Isaac
+cust_name=Isabel
+cust_name=Isidore
+cust_name=Ivan
+cust_name=Jeanne
+cust_name=Jerry
+cust_name=Jose
+cust_name=Josephine
+cust_name=Joyce
+cust_name=Juan
+cust_name=Junko
+cust_name=Nadine
+cust_name=Nate
+cust_name=Nicholas
+cust_name=Odette
+cust_name=Olga
+cust_name=Omar
+cust_name=Otto
+cust_name=Rebekah
+cust_name=Rene
+cust_name=Rose
+cust_name=Van
+Time taken: 0.099 seconds, Fetched: 32 row(s)
+
+hive (d2)> select * from DEMO_PART tablesample (20 rows);
+OK
+demo_part.cust_id	demo_part.odr_date	demo_part.shipdt	demo_part.courier	demo_part.recvd_dt	demo_part.returned_or_not	demo_part.returned_dt	demo_part.reason_of_return	demo_part.cust_name
+BPLA457837LB	03-01-2017	05-01-2017	Dhl	08-01-2017	yes	18-01-2017	Damaged Item	Alex
+BPLA457837LB	04-01-2017	06-01-2017	Delhivery	09-01-2017	no	null	null	Alex
+BPLA457837LB	08-01-2017	10-01-2017	BlueDart	13-01-2017	no	null	null	Alex
+BPLA457837LB	01-01-2017	03-01-2017	Fedx	06-01-2017	no	null	null	Alex
+BPLA457837LB	03-01-2017	05-01-2017	Fedx	08-01-2017	no	null	null	Alex
+BPLA457837LB	10-01-2017	12-01-2017	Dhl	15-01-2017	no	null	null	Alex
+BPLA457837LB	08-01-2017	10-01-2017	Dhl	13-01-2017	yes	22-01-2017	Large Size	Alex
+BPLA457837LB	01-01-2017	03-01-2017	Ekart	06-01-2017	yes	09-01-2017	Others	Alex
+GGYZ333519YS	08-01-2017	10-01-2017	Delhivery	13-01-2017	yes	15-01-2017	Damaged Item	Allison
+GGYZ333519YS	02-01-2017	04-01-2017	Fedx	07-01-2017	no	null	null	Allison
+GGYZ333519YS	21-01-2017	23-01-2017	Ekart	26-01-2017	yes	16-02-2017	Wrong Item	Allison
+GGYZ333519YS	04-01-2017	06-01-2017	Dhl	09-01-2017	yes	18-01-2017	Large Size	Allison
+GGYZ333519YS	02-01-2017	04-01-2017	BlueDart	07-01-2017	no	null	null	Allison
+GGYZ333519YS	03-01-2017	05-01-2017	Fedx	08-01-2017	yes	06-02-2017	Wrong Item	Allison
+GGYZ333519YS	22-01-2017	24-01-2017	Fedx	27-01-2017	no	null	null	Allison
+BHEE999914ED	09-01-2017	11-01-2017	BlueDart	14-01-2017	no	null	null	Ana
+BHEE999914ED	05-01-2017	07-01-2017	BlueDart	10-01-2017	yes	17-01-2017	Wrong Item	Ana
+BHEE999914ED	08-01-2017	10-01-2017	Ekart	13-01-2017	yes	05-02-2017	Large Size	Ana
+BHEE999914ED	08-01-2017	10-01-2017	Fedx	13-01-2017	yes	14-01-2017	Small Size	Ana
+BHEE999914ED	03-01-2017	05-01-2017	Delhivery	08-01-2017	no	null	null	Ana
+
+
+JOINS IN HIVE:
+
+1. INNER JOIN
+
+hive (d2)> select * from emp_tab;
+OK
+emp_tab.col1	emp_tab.col2	emp_tab.col3	emp_tab.col4	emp_tab.col5	emp_tab.col6	emp_tab.col7
+1281	Shawn	Architect	7890	1481	10	IXZ
+1381	Jacob	Admin	4560	1481	20	POI
+1481	flink	Mgr	9580	1681	10	IXZ
+1581	Richard	Developer	1000	1681	40	LKJ
+1681	Mira	Mgr	5098	1481	10	IKZ
+1781	John	Developer	6500	1681	10	IXZ
+
+hive (d2)> select * from dept_tab;
+OK
+dept_tab.col1	dept_tab.col2	dept_tab.col3	dept_tab.col4
+10	INVENTORY	HYDERABAD	IXZ
+20	Jacob	ACCOUNTS	PUNE
+30	DEVELOPMENT	CHENNAI	LKJ
+
+hive (d2)> select emp_tab.col1,emp_tab.col2,emp_tab.col3,emp_tab.col6,dept_tab.col1,dept_tab.col2,dept_tab.col4 
+from emp_tab join dept_tab on emp_tab.col6=dept_tab.col1;
+
+Total jobs = 1
+2020-11-19 22:00:14	Dump the side-table for tag: 1 with group count: 3 into file: file:/tmp/hive/a089ca78-d259-4198-931b-1685137ec60d/hive_2020-11-19_21-59-50_008_1232111553816824736-1/-local-10004/HashTable-Stage-3/MapJoin-mapfile01--.hashtable2020-11-19 22:00:14	Uploaded 1 File to: file:/tmp/hive/a089ca78-d259-4198-931b-1685137ec60d/hive_2020-11-19_21-59-50_008_1232111553816824736-1/-local-10004/HashTable-Stage-3/MapJoin-mapfile01--.hashtable (358 bytes)
+Execution completed successfully
+MapredLocal task succeeded
+Launching Job 1 out of 1
+Number of reduce tasks is set to 0 since there's no reduce operator
+Ended Job = job_local474021306_0043
+MapReduce Jobs Launched: 
+Stage-Stage-3:  HDFS Read: 935325 HDFS Write: 553250 SUCCESS
+Total MapReduce CPU Time Spent: 0 msec
+OK
+emp_tab.col1	emp_tab.col2	emp_tab.col3	emp_tab.col6	dept_tab.col1	dept_tab.col2	dept_tab.col4
+1281	Shawn	Architect	10	10	INVENTORY	IXZ
+1381	Jacob	Admin	20	20	Jacob	PUNE
+1481	flink	Mgr	10	10	INVENTORY	IXZ
+1681	Mira	Mgr	10	10	INVENTORY	IXZ
+1781	John	Developer	10	10	INVENTORY	IXZ
+Time taken: 29.041 seconds, Fetched: 5 row(s)
+
+2. Left outer join:
+hive (d2)> select emp_tab.col1,emp_tab.col2,emp_tab.col3,emp_tab.col6,dept_tab.col1,dept_tab.col2,dept_tab.col4 from emp_tab left outer join dept_tab on emp_tab.col6=dept_tab.col1;
+
+emp_tab.col1	emp_tab.col2	emp_tab.col3	emp_tab.col6	dept_tab.col1	dept_tab.col2	dept_tab.col4
+1281	Shawn	Architect	10	10	INVENTORY	IXZ
+1381	Jacob	Admin	20	20	Jacob	PUNE
+1481	flink	Mgr	10	10	INVENTORY	IXZ
+1581	Richard	Developer	40	NULL	NULL	NULL
+1681	Mira	Mgr	10	10	INVENTORY	IXZ
+1781	John	Developer	10	10	INVENTORY	IXZ
+Time taken: 26.135 seconds, Fetched: 6 row(s)
+
+3. Right outer join:
+hive (d2)> select emp_tab.col1,emp_tab.col2,emp_tab.col3,emp_tab.col6,dept_tab.col1,dept_tab.col2,dept_tab.col4 from emp_tab right outer join dept_tab on emp_tab.col6=dept_tab.col1;
+emp_tab.col1	emp_tab.col2	emp_tab.col3	emp_tab.col6	dept_tab.col1	dept_tab.col2	dept_tab.col4
+1281	Shawn	Architect	10	10	INVENTORY	IXZ
+1481	flink	Mgr	10	10	INVENTORY	IXZ
+1681	Mira	Mgr	10	10	INVENTORY	IXZ
+1781	John	Developer	10	10	INVENTORY	IXZ
+1381	Jacob	Admin	20	20	Jacob	PUNE
+NULL	NULL	NULL	NULL	30	DEVELOPMENT	LKJ
+Time taken: 25.246 seconds, Fetched: 6 row(s)
+
+4.Full outer join:
+hive (d2)> select emp_tab.col1,emp_tab.col2,emp_tab.col3,emp_tab.col6,dept_tab.col1,dept_tab.col2,dept_tab.col4 from emp_tab full outer join dept_tab on emp_tab.col6=dept_tab.col1;
+
+emp_tab.col1	emp_tab.col2	emp_tab.col3	emp_tab.col6	dept_tab.col1	dept_tab.col2	dept_tab.col4
+1781	John	Developer	10	10	INVENTORY	IXZ
+1681	Mira	Mgr	10	10	INVENTORY	IXZ
+1481	flink	Mgr	10	10	INVENTORY	IXZ
+1281	Shawn	Architect	10	10	INVENTORY	IXZ
+1381	Jacob	Admin	20	20	Jacob	PUNE
+NULL	NULL	NULL	NULL	30	DEVELOPMENT	LKJ
+1581	Richard	Developer	40	NULL	NULL	NULL
+
+
+Joining 3 files:
+
+hive (d2)> select * from third_tab;
+OK
+third_tab.id	third_tab.deptname
+10	Ist department
+20	2nd department
+30	3rd department
+40	4th department
+
+Join using all same join key column:
+
+select emp_tab.col1,emp_tab.col2,emp_tab.col3,emp_tab.col6,dept_tab.col1,dept_tab.col2,dept_tab.col4,
+third_tab.id,third_tab.deptname
+from emp_tab join dept_tab 
+on emp_tab.col6=dept_tab.col1 join third_tab
+on third_tab.id=dept_tab.col1;
+
+Query ID = dibyajyoti_20201120004849_e7ebccfb-3040-4f74-ba0a-832762eb5f4a
+Total jobs = 1
+ 
+emp_tab.col1	emp_tab.col2	emp_tab.col3	emp_tab.col6	dept_tab.col1	dept_tab.col2	dept_tab.col4	third_tab.id	third_tab.deptname
+1281	Shawn	Architect	10	10	INVENTORY	IXZ	10	Ist department
+1381	Jacob	Admin	20	20	Jacob	PUNE	20	2nd department
+1481	flink	Mgr	10	10	INVENTORY	IXZ	10	Ist department
+1681	Mira	Mgr	10	10	INVENTORY	IXZ	10	Ist department
+1781	John	Developer	10	10	INVENTORY	IXZ	10	Ist department
+Time taken: 25.103 seconds, Fetched: 5 row(s)
+hive (d2)>  
+
+Join using different non-matching columns key.
+
+select emp_tab.col1,emp_tab.col2,emp_tab.col3,emp_tab.col6,dept_tab.col1,dept_tab.col2,dept_tab.col4,
+third_tab.id,third_tab.deptname
+from emp_tab join dept_tab 
+on emp_tab.col7=dept_tab.col4 join third_tab
+on third_tab.id=dept_tab.col1;
+
+emp_tab.col1	emp_tab.col2	emp_tab.col3	emp_tab.col6	dept_tab.col1	dept_tab.col2	dept_tab.col4	third_tab.id	third_tab.deptname
+1281	Shawn	Architect	10	10	INVENTORY	IXZ	10	Ist department
+1481	flink	Mgr	10	10	INVENTORY	IXZ	10	Ist department
+1781	John	Developer	10	10	INVENTORY	IXZ	10	Ist department
+1581	Richard	Developer	40	30	DEVELOPMENT	LKJ	30	3rd department
+Time taken: 26.729 seconds, Fetched: 4 row(s)
+
+
+Memory management and optimisation:
+
+By rule last table is streamed and first tables are buffered. So if three tables are joined together
+on a common key column then first two tables are buffered and third table is streamed.
+In below query emp and dept will be buffered whereas third tab will be streamed since common key is used across.
+
+select emp_tab.col1,emp_tab.col2,emp_tab.col3,emp_tab.col6,dept_tab.col1,dept_tab.col2,dept_tab.col4,
+third_tab.id,third_tab.deptname
+from emp_tab join dept_tab 
+on emp_tab.col6=dept_tab.col1 join third_tab
+on third_tab.id=dept_tab.col1;
+
+Below query has common key in first two table whereas different key in last table join.
+So for first join emp table is buffered and dept is streamed. Then for last join, the result of first join is buffered
+and third tab is streamed.
+
+select emp_tab.col1,emp_tab.col2,emp_tab.col3,emp_tab.col6,dept_tab.col1,dept_tab.col2,dept_tab.col4,
+third_tab.id,third_tab.deptname
+from emp_tab join dept_tab 
+on emp_tab.col7=dept_tab.col4 join third_tab
+on third_tab.id=dept_tab.col1;
+
+Always advisable to place bigger table in last in join condition due to buffer memory and optimisation.
+Bigger in size means larger than our buffer memory. In case we are unable to place the bigger table in last 
+we can explicitely tell hive to consider the table to stream using /*+STREAMTABLE(table_name) */
+
+select /*+ STREAMTABLE(emp_tab) */emp_tab.col1,emp_tab.col2,emp_tab.col3,emp_tab.col6,dept_tab.col1,dept_tab.col2,dept_tab.col4,
+third_tab.id,third_tab.deptname
+from emp_tab join dept_tab 
+on emp_tab.col7=dept_tab.col4 join third_tab
+on third_tab.id=dept_tab.col1;
+
+MAP SIDE JOIN:
+limitations: Does not support full outer map join.
+
+Two ways to declare: Either in Select statement we can specify /*+ MAPJOIN(<table_name>) */
+or set the property as below:
+
+set.hive.auto.convert.join=true;  --> Default false
+set hive.mapjoin.smalltable.filesize;  --> defualt 25MB size is taken. Any tables less then that will be considered
+for map join.
+ 
+
+select /*+ MAPJOIN(emp_tab) */emp_tab.col1,emp_tab.col2,emp_tab.col3,emp_tab.col6,dept_tab.col1,dept_tab.col2,dept_tab.col4,
+third_tab.id,third_tab.deptname
+from emp_tab join dept_tab 
+on emp_tab.col7=dept_tab.col4 join third_tab
+on third_tab.id=dept_tab.col1;
+
+Bucketed MAP JOIN: 
+Rules : 1. Both tables should have same number of buckets and join column should be the bucketed column
+for both tables.
+below property need to be set:
+
+set hive.input.format=org.apache.hadoop.hive.ql.io.BucketizedHiveInputFormat;
+set hive.optimize.bucketmapjoin=true;
+set hive.auto.convert.sortmerge.join=true;
+set hive.optimize.bucketmapjoin.sortedmerge=true;
+
+Views in hive:
+Searchable object in database where it self doesn't have any data but get populated when queried.
+
+
+CREATE VIEW IF NOT EXISTS VIEW1 AS 
+select emp_tab.col1 AS EMPCOL,emp_tab.col2 AS EMPCOL2,emp_tab.col3,emp_tab.col6,dept_tab.col1 AS DEPTCOL,dept_tab.col2 AS DEPTCOL2,dept_tab.col4,
+third_tab.id,third_tab.deptname
+from emp_tab join dept_tab 
+on emp_tab.col7=dept_tab.col4 join third_tab
+on third_tab.id=dept_tab.col1;
+
+Indexing:
+
+Indexing are done to speed up searching of data. Partitioning always speeds up but done at HDFS level. Indexing is table level.
+COMPACT INDEXING: It stores the pair of index column values along with its block id in HDFS storage.
+BITMAP INDEXING : It stores the combination of mapped index column values along with entire row as bitmap.
+Type of image file format like digital image.
+Both are same different on storage techniques.
+
+CREATE INDEX table02_index ON TABLE emp_tab (col2) AS 'COMPACT' WITH DEFERRED REBUILD;
+ALTER INDEX table02_index ON TABLE emp_tab rebuild;
+
+CREATE INDEX table02_index ON TABLE emp_tab (col2) AS 'COMPACT' WITH DEFERRED REBUILD stored as rcfile;
+CREATE INDEX table02_index ON TABLE emp_tab (col2) AS 'COMPACT' WITH DEFERRED REBUILD 
+row format delimited fields terminated by ',' stored as rcfile;
+
+SHOW FORMATTED INDEX ON <TABLE_NAME>;
+DROP INDEX <INDEX_NAME> ON <TABLE_NAME>;
+
+INDEXING IS DONE WHENE:
+1. Dataset is large mostly in GB's.
+2. frequent where clause is used on particular columns.
+3. Latency matters and speed of processing is required
+
+Not to be used when:
+1. Small dataset.
+2. Less where clause
+3. Unique records 
+More unique index on column will degrade performance as index has to be loaded and stored separately.
+Analyse dataset to decide for compact or bitmap required.
+
+UDF DEMO:
+1. Create java package and class. Add jars to the package.
+2. Export the package as a JAR to the desktop.
+3. Add jar in hive shell.
+4. create a temporary or permanent function in hive shell pointing to packagename.classname;
+5. use the function in the query.
+
+package com.hive;
+import org.apache.hadoop.hive.ql.exec.UDF;
+import org.apache.hadoop.io.Text;
+
+public class F2 extends UDF {
+	public Text evaluate(final Text s) {
+		
+		if(s==null) {
+			return null;
+		}
+		return new Text(s.toString().toUpperCase());
+	}
+
+}
+
+hive (d2)> add jar /Users/dibyajyoti/Desktop/UDF.jar;
+hive (d2)> create temporary function f2 as 'com.hive.F2';
+hive (d2)> select col1,f2(col2) from emp_tab;
+OK
+col1	_c1
+1281	SHAWN
+1381	JACOB
+1481	FLINK
+1581	RICHARD
+1681	MIRA
+1781	JOHN
+Time taken: 1.037 seconds, Fetched: 6 row(s)
+
+Property:
+"immutable"="true" -> Only allows first data to be written to the immutable table. Subsequent insert into result into error.
+But Insert Overwrite is allowed as it wipes the older data and freshly writes new record.
+syntax: tbtproperties("immutable"="true")
+
+
+Drop and truncate:
+Internal table : Drop command removes data and metadata from hive. the deleted data goes to trash.
+External table : Drop removes metadata and structure of table from hive but data is managed by HDFS so data resides there.
+
+Truncate: truncate table <table_name>;
+It removes the data only and keeps the metadata.
+
+tblproperties("auto.purge"="true") -> if the purge is set to true then in case of drop or truncate data wont go to trash but
+completely removed from hive and hdfs. 
+
+NULL Property: tblproperties("serialization.null.format"="")
+Hive treats a empty value for a column as a record itself so if we load a file to a table and we have missing values
+for some columns then hive will not insert null for those values in column. To make hive
+treat them as null we have to set the property. 
+We can give any value in the properties based on fileformat and use case.
+
+HIVE ACID/Transaction property:
+
+1.hive-site.xml property to be set as below:
+
+<property>
+    <name>hive.in.test</name>
+    <value>true</value>
+    <description/>
+  </property>
+
+2. Below property in hive shell for the session.
+
+set hive.support.concurrency=true;
+set hive.enforce.bucketing=true;
+set hive.exec.dynamic.partition.mode=non-strict;
+set hive.compactor.initiator.on=true;
+set hive.compactor.worker.threads=1;
+set hive.txn.manager=org.apache.hadoop.hive.ql.lockmgr.DbTxnManager;
+
+Hive started transaction property but it is not efficient and has certain limitations.
+1. Transaction property should be true in table properties.
+2. Table should be bucketed and fileformat as ORC file.
+3. Commit,rollback,begin are not supported yet.
+4. Reading /writing to a acid table are only allowed for a session where transactional properties are true.
+5. We cannot update bucketed column in transactional table.
+
+ create table trans (col1 int,col2 string,col3 string,col4 int) clustered by(col2) into 4 buckets row format delimited fields terminated by ',' lines terminated by '\n'
+ stored as orc tblproperties("transactional"="true");
+
+insert into table trans(col1,col2,col3,col4) select col1,col2,col3,col4 from emp_tab;
+insert into table trans values(102,'akash','Nayak',20000),(101,'Ajay','Das',89000);
+
+hive (d2)> select * from trans;
+OK
+trans.col1	trans.col2	trans.col3	trans.col4
+1481	flink	Mgr	9580
+1781	John	Developer	6500
+1681	Mira	Mgr	5098
+1581	Richard	Developer	1000
+1381	Jacob	Admin	4560
+1281	Shawn	Architect	7890
+101	Anshuman	Nayak	10000
+101	Ajay	Das	89000
+102	akash	Nayak	20000
+
+hive (d2)> update trans set col4=98000 where col1=101;
+hive (d2)> select * from trans;
+OK
+trans.col1	trans.col2	trans.col3	trans.col4
+1481	flink	Mgr	9580
+1781	John	Developer	6500
+1681	Mira	Mgr	5098
+1581	Richard	Developer	1000
+1381	Jacob	Admin	4560
+1281	Shawn	Architect	7890
+102	akash	Nayak	20000
+101	Ajay	Das	98000
+101	Anshuman	Nayak	98000
+
+hive (d2)> delete from trans where col1=1281;
+hive (d2)> select * from trans;
+OK
+trans.col1	trans.col2	trans.col3	trans.col4
+1481	flink	Mgr	9580
+1781	John	Developer	6500
+1681	Mira	Mgr	5098
+1581	Richard	Developer	1000
+1381	Jacob	Admin	4560
+102	akash	Nayak	20000
+101	Ajay	Das	98000
+101	Anshuman	Nayak	98000
+
+Properties:
+
+set mapred.reduce.tasks;  --> no of reducers to be used.
+set hive.exec.reducers.bytes.per.reducer;  --> no of bytes allocated to per reducer.
+set hive.exec.reducers.max; --> max reducers to be used in any job.
+set dfs.block.size; --> block size of hdfs or each input split size.
+set hive.default.fileformat; --> default fileformat of hive for any table if not specified during table creation.
+set parquet.block.size;   --> if parquet file format is used. The default block size.
+set hive.mapred.mode;     --> strict or non-strict. If strict then order by has to use a limit clause since it uses one reducer.
+set hive.groupby.orderby.position.alias;   --> Only for orderby query to use numbers instead of column name. example order by 1 or 2
+set mapred.map.tasks.speculative.execution; --> Speculative execution to run only in mapper due to complex algo
+set mapred.reduce.tasks.speculative.execution; --> Speculative execution to run only in reducer due to complex algo
+set hive.convert.auto.join; --> sense map side join automatically by hive and use map side join for the query
+set hive.enforce.bucketing;  --> use/allow bucketing in table
+
+Hive Optimisation technique when latency is not considered but disk space is:
+
+Files generated during Create table or insert statement. Use case latency is not concerned but disk space is.
+Penalty: Hive will be running additional MR job to merge the files before user is intimated the query success or output.
+This reduced throughput of our query.
+
+1. Merge files in hive
+set hive.merge.mapfiles; --> merge small files that are produced from map only jobs.
+set hive.merge.mapredfiles; -->merge small files that are produced from map-reduce jobs.
+set hive.merge.size.per.task; --> When merging small files, the target size for the merge files at the end of job.
+set hive.merge.smallfiles.avgsize; --> when the avg size of the output file generated is less than this number
+then it will generate another MR job to merge the files using the property (hive.merge.mapfiles and hive.merge.mapredfiles)
+
+2. Parallelism property
+when we are executing query involving joins or involving aggregation of results from multiple query outputs from different 
+dataset of table we can use parallelism property to avoid execution of each stage in sequence.
+Since stages are independent of each other and can run in parallel so it leads to decrease time.
+limitations: if it involves processing of complex algos then running independent parallel task can lead to
+deadlock of database and cluster consumption/overhead at same time. Other processes or task running on same cluster
+can be effected. So we have to use it wisely.
+
+set hive.exec.parallel=true;
+In below example we can see we have got a reduction of ~5 seconds.
+
+example:
+set hive.exec.parallel=false;
+hive (d2)> select a.col1,a.col6,b.col1,b.col2 from (select * from emp_tab) a join (select * from dept_tab) b on (a.col6=b.col1);
+a.col1	a.col6	b.col1	b.col2
+1281	10	10	INVENTORY
+1381	20	20	Jacob
+1481	10	10	INVENTORY
+1681	10	10	INVENTORY
+1781	10	10	INVENTORY
+Time taken: 35.512 seconds, Fetched: 5 row(s)
+
+set hive.exec.parallel=true;
+OK
+a.col1	a.col6	b.col1	b.col2
+1281	10	10	INVENTORY
+1381	20	20	Jacob
+1481	10	10	INVENTORY
+1681	10	10	INVENTORY
+1781	10	10	INVENTORY
+Time taken: 30.718 seconds, Fetched: 5 row(s)
+
+
+Commands:
+hive -f
+hive -e
+source <script> in hive shell
+
+Run hadoop commands from hive shell:
+hive (d2)> !hadoop fs -ls /user/resources/;
+Found 7 items
+drwxr-xr-x   - dibyajyoti supergroup          0 2020-11-15 00:10 /user/resources/EvenoddOutput
+-rw-r--r--   1 dibyajyoti supergroup       8731 2020-11-15 00:08 /user/resources/evenoddinput
+drwxr-xr-x   - dibyajyoti supergroup          0 2020-11-14 21:22 /user/resources/wc1
+drwxr-xr-x   - dibyajyoti supergroup          0 2020-11-14 21:26 /user/resources/wc2
+drwxr-xr-x   - dibyajyoti supergroup          0 2020-11-14 21:35 /user/resources/wcwithcombiner
+drwxr-xr-x   - dibyajyoti supergroup          0 2020-11-14 21:43 /user/resources/wcwithcombiner1
+-rw-r--r--   1 dibyajyoti supergroup        162 2020-11-14 21:20 /user/resources/word
+
+Variables in hive:
+There are two types of variables in hive
+1.hiveconf(local) 2.hivevar(global)
+
+hive (d2)> set val1=10;
+hive (d2)> set val1;
+val1=10
+hive (d2)> select * from emp_tab where col6=${hiveconf:val1};
+OK
+emp_tab.col1	emp_tab.col2	emp_tab.col3	emp_tab.col4	emp_tab.col5	emp_tab.col6	emp_tab.col7
+1281	Shawn	Architect	7890	1481	10	IXZ
+1481	flink	Mgr	9580	1681	10	IXZ
+1681	Mira	Mgr	5098	1481	10	IKZ
+1781	John	Developer	6500	1681	10	IXZ
+Time taken: 0.518 seconds, Fetched: 4 row(s)
+hive (d2)> set hivevar:val2=col2;
+hive (d2)> set val2;
+val2=col2
+hive (d2)> select col1,${hivevar:val2},col3 from emp_tab where col6=${hiveconf:val1};
+OK
+col1	col2	col3
+1281	Shawn	Architect
+1481	flink	Mgr
+1681	Mira	Mgr
+1781	John	Developer
+Time taken: 0.283 seconds, Fetched: 4 row(s)
+hive (d2)> select col1,${val2},col3 from emp_tab where col6=${hiveconf:val1};
+OK
+col1	col2	col3
+1281	Shawn	Architect
+1481	flink	Mgr
+1681	Mira	Mgr
+1781	John	Developer
+
+Hiveconf variable cannot be used without ${hiveconf} keyword whereas hivevar being global ,its variables can be used
+directly without using ${hivevar}
+
+if a variable is declared as hivevar in a script and sourced in hiveshell . Then its value remain untouched for that variable.
+if we re-assign that variable in the shell then it will be pointed as hiveconf and not hivevar.
+
+hive --hiveconf val1=10 --hivevar val2=col2 -e 'select col1,${val2},col3 from d2.emp_tab where col6=${hiveconf:val1}';
+Hive Session ID = 3d46e4a3-3e64-4443-aee4-f2745a16a4c4
+Error rolling back: Can''t call rollback when autocommit=true
+OK
+col1	col2	col3
+1281	Shawn	Architect
+1481	flink	Mgr
+1681	Mira	Mgr
+1781	John	Developer
+Time taken: 4.659 seconds, Fetched: 4 row(s)
+
+Running through script
+
+hivescript.hql
+select * from d2.${tablename};
+select col1,${val2},col3 from d2.emp_tab where col6=${hiveconf:val1};
+select ${val3},${val2},col3 from d2.${tablename} where col6=${hiveconf:val1};
+
+
+hive  --hiveconf val1=10 --hivevar val2=col2 --hivevar tablename=emp_tab --hivevar val3=col1 -f /Users/dibyajyoti/Desktop/hivescript.hql;
+
+emp_tab.col1	emp_tab.col2	emp_tab.col3	emp_tab.col4	emp_tab.col5	emp_tab.col6	emp_tab.col7
+1281	Shawn	Architect	7890	1481	10	IXZ
+1381	Jacob	Admin	4560	1481	20	POI
+1481	flink	Mgr	9580	1681	10	IXZ
+1581	Richard	Developer	1000	1681	40	LKJ
+1681	Mira	Mgr	5098	1481	10	IKZ
+1781	John	Developer	6500	1681	10	IXZ
+Time taken: 4.265 seconds, Fetched: 6 row(s)
+OK
+col1	col2	col3
+1281	Shawn	Architect
+1481	flink	Mgr
+1681	Mira	Mgr
+1781	John	Developer
+Time taken: 0.858 seconds, Fetched: 4 row(s)
+OK
+col1	col2	col3
+1281	Shawn	Architect
+1481	flink	Mgr
+1681	Mira	Mgr
+1781	John	Developer
+Time taken: 0.345 seconds, Fetched: 4 row(s)
+
+Hive variable substitute:
+
+hive (d2)> set hive.variable.substitute=true;
+set tablename=emp_tab;
+set newtable=${hiveconf:tablename}
+hive (d2)> set newtable;
+newtable=${hiveconf:tablename}
+hive (d2)> select * from ${hiveconf:newtable};
+OK
+emp_tab.col1	emp_tab.col2	emp_tab.col3	emp_tab.col4	emp_tab.col5	emp_tab.col6	emp_tab.col7
+1281	Shawn	Architect	7890	1481	10	IXZ
+1381	Jacob	Admin	4560	1481	20	POI
+1481	flink	Mgr	9580	1681	10	IXZ
+1581	Richard	Developer	1000	1681	40	LKJ
+1681	Mira	Mgr	5098	1481	10	IKZ
+1781	John	Developer	6500	1681	10	IXZ
+Time taken: 0.388 seconds, Fetched: 6 row(s)
+
+String datatype max size 2gb
+hive (d2)> set -v; -> prints all hadoop and hive configuration variables
+
+Modes in Hive:
+1. Embedded Mode:
+here metastore and derby DB runs in single hive jvm. Only for experimental purpose. Allows only single hive connection.
+2. Local Mode:
+Good for hadoop pseudo mode where namenode and 1datanode are present in same machine. Small dataset processing.
+Here Hive metastore(drive + metastore)runs in separate JVM and use JDBC to connect with DB.
+
+
+3.Remote mode. Production usage. here db, metastore uses own separate JVM.
+Here metastore uses own jvm uses JDBC to connect to db.Doesnt require admin for sharing
+creds to connect to metastore for each hive user.
+Large dataset, fast parallel processing.
+
+Use the below property to change the mode
+hive (d2)> set mapred.job.tracker;
+mapred.job.tracker=localhost:8021
+
+Hive Compression techniques:
+Compress files to small size in terms of size. 
+Advtges: occupy less space, uses less bandwidth in network.
+
+Phases of compression:
+1. Compress Input files.
+2. Compress map output
+
+hive (d2)> set mapred.compress.map.output;
+mapred.compress.map.output=false
+hive (d2)> set mapred.map.output.compression.codec;
+mapred.map.output.compression.codec=org.apache.hadoop.io.compress.DefaultCodec
+
+hive (d2)> set mapred.map.output.compression.codec=snappy;
+hive (d2)> set mapred.map.output.compression.codec;
+mapred.map.output.compression.codec=snappy
+
+3. Compress reducer output
+hive (d2)> set mapred.output.compress;
+mapred.output.compress=false
+hive (d2)> set mapred.output.compress=true;
+hive (d2)> set mapred.output.compression.codec;
+mapred.output.compression.codec=org.apache.hadoop.io.compress.DefaultCodec
+
+
+Hiverc File:
+1. Add jars
+2. Add udf
+3. Add any set command
+
+create .hiverc file in conf folder with your set statements. This will be included in all hive sessions.
+
+Hive Archiving:
+
+set har.partfile.size=1099511627776;
+set hive.archive.enabled=true;
+set hive.archive.har.parentdir.settable=true;
+
+1.Stored as har files.
+2.Reduces load on name node. Archive small files as package.
+3.old data is archived mostly.
+
+hive (d2)> alter table dynamic_part2 archive partition(cust_name='Allison');
+intermediate.archived is hdfs://localhost:8020/user/hive/warehouse/d2.db/dynamic_part2/cust_name=Allison_INTERMEDIATE_ARCHIVED
+intermediate.original is hdfs://localhost:8020/user/hive/warehouse/d2.db/dynamic_part2/cust_name=Allison_INTERMEDIATE_ORIGINAL
+Creating data.har for hdfs://localhost:8020/user/hive/warehouse/d2.db/dynamic_part2/cust_name=Allison
+
+
+TEZ Engine:
+1. Tez is a distributed execution framework to run data processing applications on hadoop.
+2. Tez is a optimised,advanced,successor to MR and leverage yarn to execute DAG of general data processing tasks.
+3. Optimal resource management, performance gains over MR.Flexible input-processor-output runtime model.
+In MR when we have chain of mappers or reducers per reduce task 1 MR job is executed. Its output is written to HDFS.
+Next MR reads the HDFS input and processes and write to HDFS. The chain continues but in TEZ
+the 1st MR job runs and its output can be feed to n number of reducers removing the need to write in HDFS multiple times
+and creating new MR jobs everytime. Total processing is seen as 1 task. It chains multiple reducer to 1 mapper task.
+
+1. DAG architecture
+a. Sees the data processing task as dataflow graph.
+b. uses yarn for resource allocation. 
+c. Sees vertices as complex logic and edges as movement of data.
+
+2. Multiple reduce tasks.
+input file -> 1MR ->HDFS -> 2MR -> HDFS ->3MR -> Output file
+in tez -> 1MR ->Reducer1->Reducer2-> final output.
+3. In-memory vs Disk writes
+a. In MR regardless of input file size , data is shuffled across nodes in network. But in tez small dataset can be stored
+in in-memory fully.
+4. fine tunes algorithms:
+Can choose many sorting algo in tez while in MR only binary sort.
+5. Distributed join algo tez , MR its complex.
+
+set hive.execution.engine=tez;
+only hortonworks supports.
+
+XML Serde
+
+sample file:
+
+<CATALOG>
+<BOOK>
+<TITLE>Hadoop Defnitive Guide</TITLE>
+<AUTHOR>Tom White</AUTHOR>
+<COUNTRY>US</COUNTRY>
+<COMPANY>CLOUDERA</COMPANY>
+<PRICE>24.90</PRICE>
+<YEAR>2012</YEAR>
+</BOOK>
+<BOOK>
+<TITLE>Programming Pig</TITLE>
+<AUTHOR>Alan Gates</AUTHOR>
+<COUNTRY>USA</COUNTRY>
+<COMPANY>Horton Works</COMPANY>
+<PRICE>30.90</PRICE>
+<YEAR>2013</YEAR>
+</BOOK>
+</CATALOG>
+
+hive (d2)> add jar /Users/dibyajyoti/Downloads/hivexmlserde-1.0.5.3.jar ;
+Added [/Users/dibyajyoti/Downloads/hivexmlserde-1.0.5.3.jar] to class path
+Added resources: [/Users/dibyajyoti/Downloads/hivexmlserde-1.0.5.3.jar]
+
+CREATE TABLE BOOK (title string,author string,country string,company string,price float, year int)
+row format serde 'com.ibm.spss.hive.serde2.xml.XmlSerDe'
+with SERDEPROPERTIES(
+"column.xpath.title"="/BOOK/TITLE/text()",
+"column.xpath.author"="/BOOK/AUTHOR/text()",
+"column.xpath.country"="/BOOK/COUNTRY/text()",
+"column.xpath.company"="/BOOK/COMPANY/text()",
+"column.xpath.price"="/BOOK/COMPANY/text()",
+"column.xpath.year"="/BOOK/YEAR/text()")
+STORED AS
+INPUTFORMAT 'com.ibm.spss.hive.serde2.xml.XmlInputFormat'
+OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat'
+TBLPROPERTIES ("xmlinput.start"="<BOOK>","xmlinput.end"="</BOOK>");
+
+load data local inpath '/Users/dibyajyoti/Downloads/books.xml' into table BOOK;
+
+
+SCD (Slowly Changing dimension)
+1. SCD type 0 : History record to be preserved. No update or changing dimension of table.
+2. SCD type 1: No History record to be preserved. Overwrite existing record with new update in the changing dimension table.
+3. SCD type 1: Preserve both history and updated record in dimension table. 
+Implemented in three ways:
+a. Versioning : use sequence number extra column with each row and incremental the sequence number
+for the new record. The bigger sequence number for the same record means the updated record.
+b. Flag : Use flag 0 for old record when new record comes insert record with flag as 1 and for subsequent new updates
+for existing record , all old records flags are 0 and new update row has only flag as 1
+c. Effective date: Maintains both start_date and end_date for a record.
+whenever new records is inserted to table,the end_date is null.
+If a update comes then old record end_date = new_updated record Start_date -1
+and updated record row has end_date null. This continues for subsequent updates and end_date is updated
+with similar logic.
+
+sample example:
+
+hive (d2)> select * from table_new;
+OK
+table_new.name	table_new.salary
+John	1500
+Albert	1900
+Mark	1000
+Frank	1150
+Loopa	1100
+Lui	1300
+Lesa	900
+Pars	800
+leo	700
+lock	650
+Bhut	800
+Lio	500
+Time taken: 3.742 seconds, Fetched: 12 row(s)
+hive (d2)> select * from table_old;
+OK
+table_old.name	table_old.salary
+John	1300
+Albert	1200
+Mark	1000
+Frank	1150
+Loopa	1100
+Lui	1300
+Lesa	900
+Pars	800
+leo	700
+lock	650
+pars	900
+jack	700
+fransis	1000
+
+select 
+case 
+when cdc_codecs='NoChange' then table_olds
+when cdc_codecs='New' then table_news
+when cdc_codecs='Deletes' then table_olds
+when cdc_codecs='Update' then table_news
+end
+from(
+select
+case 
+when table_old.name=table_new.name and table_old.salary=table_new.salary then 'NoChange'
+when table_old.name=table_new.name and table_old.salary<>table_new.salary then 'Update'
+when table_old.name is null then 'New'
+when table_new.name is null then 'Deletes'
+end as cdc_codecs,
+concat(table_old.name,',',table_old.salary) as table_olds,
+concat(table_new.name,',',table_new.salary) as table_news
+from table_old
+full outer join
+table_new on table_old.name=table_new.name) as b1;
+
+
+Executing internal nested query gives below output:
+
+cdc_codecs	table_olds	table_news
+Update	Albert,1200	Albert,1900
+New	NULL	Bhut,800
+NoChange	Frank,1150	Frank,1150
+Update	John,1300	John,1500
+NoChange	Lesa,900	Lesa,900
+New	NULL	Lio,500
+NoChange	Loopa,1100	Loopa,1100
+NoChange	Lui,1300	Lui,1300
+NoChange	Mark,1000	Mark,1000
+NoChange	Pars,800	Pars,800
+Deletes	fransis,1000	NULL
+Deletes	jack,700	NULL
+NoChange	leo,700	leo,700
+NoChange	lock,650	lock,650
+Deletes	pars,900	NULL
+
+When above nested query join result is passed to outer query then it gives final result as below:
+
+c0
+Albert,1900
+Bhut,800
+Frank,1150
+John,1500
+Lesa,900
+Lio,500
+Loopa,1100
+Lui,1300
+Mark,1000
+Pars,800
+fransis,1000
+jack,700
+leo,700
+lock,650
+pars,900
+
+WordCount in hive:
+We will use split() and explode function to obtain the result.
+Split splits the input string based on ',' as elements in a array collection.
+Explode operates on the generated list and converts each element as new row.
+Then we group by on each row to generate count of words.
+
+hive (d2)> create table wordc(line string) stored as textfile;
+OK
+Time taken: 0.153 seconds
+hive (d2)> load data local inpath '/Users/dibyajyoti/Downloads/word_count-2.txt' into table wordc;
+Loading data to table d2.wordc
+OK
+Time taken: 0.874 seconds
+hive (d2)> select * from wordc;
+OK
+wordc.line
+john,lupa,john,frank,frank,john,kuoa,john,frank,frank,john,frank,frank,lupa,john,frank,lupa,john,frank
+
+
+1.Split()
+
+hive (d2)> select split(line,',') new_word from wordc;
+OK
+new_word
+["john","lupa","john","frank","frank","john","kuoa","john","frank","frank","john","frank","frank","lupa","john","frank","lupa","john","frank"]
+
+2. Explode()
+hive (d2)> select explode(split(line,',')) new_word from wordc;
+OK
+new_word
+john
+lupa
+john
+frank
+frank
+john
+kuoa
+john
+frank
+frank
+john
+frank
+frank
+lupa
+john
+frank
+lupa
+john
+frank
+
+3. Final result:
+hive (d2)> select new_word, count(1) as count from (select explode(split(line,',')) new_word from wordc) as new_word group by new_word;
+new_word	count
+frank	8
+john	7
+kuoa	1
+lupa	3
+
+Multiple tables on same dataset:
+Yes we can create multiple tables on same dataset on exact column or varying columns.
+case 1: If the number of fields in the dataset per row is same as number of columns in the table then exact
+match happen and table gets populated as normal.
+case 2: If the number of columns in target table is 3 whereas the number of records per row in dataset is 4.
+In this case the table gets populated from 1st record to 3rd record of the dataset for each row. Then 4th record
+is not loaded to target table.
+case 3: If the number of columns in target table is 5 or more than the no of columns in dataset.
+In this case the target table get loaded for each row till the records are present and the extra columns
+per row in the table are populated as NUll or space based on hive properties set by user.
+
+ 
+
+
+CREATE TABLE `table9`(
+  `empid` int COMMENT '', 
+  `name` string COMMENT '')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.avro.AvroSerDe' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat'
+LOCATION
+  'hdfs://localhost:8020/user/hive/warehouse/d2.db/table9'
+TBLPROPERTIES (
+  'auto.purge'='true', 
+  'bucketing_version'='2', 
+  'last_modified_by'='dibyajyoti', 
+  'last_modified_time'='1605556478', 
+  'transient_lastDdlTime'='1605558868');
+
+select col1,col3,
+CASE COL3
+	WHEN 'England' then 'England is british'
+	WHEN 'Wales' then 'Wales rules always'
+	ELSE 'We are in INDIA'
+	END as new_status
+	from table2
