@@ -19,4 +19,4 @@ public class EmployeeMapper extends Mapper<LongWritable,Text,Text,Text>{
 
 }
 
-// 1 , EMP,JACK
+// 1 , EMPLOYEE,JACK
