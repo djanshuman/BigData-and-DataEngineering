@@ -7,7 +7,7 @@ import java.util.List;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
 
-//1 , [{EMP,JACK} {ADDRESS,PARIS}]
+//1 , [{EMPLOYEE,JACK} {ADDRESS,PARIS}]
 
 public class MyReducer extends Reducer<Text,Text,Text,Text>{
 
