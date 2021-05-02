@@ -35,7 +35,7 @@ public class ConsumerWithSeekAssign {
         consumer.assign(Arrays.asList(partitiontoReadFrom));
 
         //seek
-        long offsetToReadFrom=40L;
+        long offsetToReadFrom=90L;
         consumer.seek(partitiontoReadFrom,offsetToReadFrom);
 
         int numberOfMessageToRead=5;
@@ -58,6 +58,7 @@ public class ConsumerWithSeekAssign {
             }
 
         }
+        logger.info("Exiting the application");
 
     }
 }
