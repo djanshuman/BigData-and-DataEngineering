@@ -22,7 +22,7 @@ public class ProducerWithKeys {
         property.setProperty(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG,"true");
         property.setProperty(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION,"5"); //kafka  2.0 >1.1 else 1 otherwise
 
-        // set for high throughput producer
+        // set for high throughput producer by introducing some delay
 
         property.setProperty(ProducerConfig.LINGER_MS_CONFIG,"5");
         property.setProperty(ProducerConfig.BATCH_SIZE_CONFIG,Integer.toString(32*1024));
