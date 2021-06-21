@@ -1,0 +1,1539 @@
+====APACHE SPARK=====
+
+---CHAPTER2 : A Gentle Introduction to Spark ----
+
+Spark is an unified computing framework or a distribution engine. If we are having a single computer and have a huge process of
+information to process 
+
+
+>>> spark
+<pyspark.sql.session.SparkSession object at 0x7f9fbe15c438>
+>>> myrange=spark.range(1000).toDF("number")
+>>> myrange
+DataFrame[number: bigint]
+>>> 
+		
+		
+flightdata=spark \
+.read \
+.option("inferschema","true") \
+.option("header","true") \
+.csv("hdfs://localhost:9870/data/2015-summary.csv")
+
+
+flightdata=spark \
+.read \
+.option("inferschema","true") \
+.option("header","true") \
+.csv("/Users/dibyajyoti/Desktop/2015-summary.csv")
+
+
+spark.conf.set("spark.sql.shuffle.partitions","5")
+
+flightdata.createOrReplaceTempView("flight_date_2015")
+
+dataFrameWay=flightdata\
+.groupBy("DEST_COUNTRY_NAME")\
+.count()
+
+>>> dataFrameWay.explain()
+== Physical Plan ==
+*(2) HashAggregate(keys=[DEST_COUNTRY_NAME#38], functions=[count(1)])
++- Exchange hashpartitioning(DEST_COUNTRY_NAME#38, 5), ENSURE_REQUIREMENTS, [id=#110]
+   +- *(1) HashAggregate(keys=[DEST_COUNTRY_NAME#38], functions=[partial_count(1)])
+      +- FileScan csv [DEST_COUNTRY_NAME#38] Batched: false, DataFilters: [], Format: CSV, Location: InMemoryFileIndex[file:/Users/dibyajyoti/Desktop/2015-summary.csv], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<DEST_COUNTRY_NAME:string>
+
+sqlWay=spark.sql('''select DEST_COUNTRY_NAME, count(*) 
+from flight_date_2015 GROUP BY DEST_COUNTRY_NAME ''')
+
+>>> sqlWay.explain()
+== Physical Plan ==
+*(2) HashAggregate(keys=[DEST_COUNTRY_NAME#38], functions=[count(1)])
++- Exchange hashpartitioning(DEST_COUNTRY_NAME#38, 5), ENSURE_REQUIREMENTS, [id=#129]
+   +- *(1) HashAggregate(keys=[DEST_COUNTRY_NAME#38], functions=[partial_count(1)])
+      +- FileScan csv [DEST_COUNTRY_NAME#38] Batched: false, DataFilters: [], Format: CSV, Location: InMemoryFileIndex[file:/Users/dibyajyoti/Desktop/2015-summary.csv], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<DEST_COUNTRY_NAME:string>
+
+
+from pyspark.sql.functions import max
+>>> flightdata.select(max("count")).take(1)
+[Row(max(count)=370002)]
+
+
+>>> res=spark.sql('''select max(count) from flight_date_2015''')
+>>> res.show()
++----------+
+|max(count)|
++----------+
+|    370002|
++----------+
+
+>>> spark.sql('''select max(count) from flight_date_2015''').show()
++----------+
+|max(count)|
++----------+
+|    370002|
++----------+
+
+>>> 
+
+>>> maxSql=spark.sql(''' select DEST_COUNTRY_NAME, sum(count) as destination_total
+... from  flight_date_2015 
+... group by DEST_COUNTRY_NAME
+... order by sum(count) desc
+... limit 5''')
+>>> maxSql.show()
++-----------------+-----------------+
+|DEST_COUNTRY_NAME|destination_total|
++-----------------+-----------------+
+|    United States|           411352|
+|           Canada|             8399|
+|           Mexico|             7140|
+|   United Kingdom|             2025|
+|            Japan|             1548|
++-----------------+-----------------+
+
+>>> 
+
+from pyspark.sql.functions import desc
+>>> flightdata.groupBy('DEST_COUNTRY_NAME')\
+... .sum('count')\
+... .withColumnRenamed('sum(count)','destination_total')\
+... .sort(desc('destination_total'))\
+... .limit(5)\
+... .show()
+
++-----------------+-----------------+
+|DEST_COUNTRY_NAME|destination_total|
++-----------------+-----------------+
+|    United States|           411352|
+|           Canada|             8399|
+|           Mexico|             7140|
+|   United Kingdom|             2025|
+|            Japan|             1548|
++-----------------+-----------------+
+
+>>> 
+
+flightdata.groupBy('DEST_COUNTRY_NAME')\
+.sum('count')\
+.withColumnRenamed('sum(count)','destination_total')\
+.sort(desc('destination_total'))\
+.limit(5).explain()
+
+== Physical Plan ==
+TakeOrderedAndProject(limit=5, orderBy=[destination_total#271L DESC NULLS LAST], output=[DEST_COUNTRY_NAME#38,destination_total#271L])
++- *(2) HashAggregate(keys=[DEST_COUNTRY_NAME#38], functions=[sum(cast(count#40 as bigint))])
+   +- Exchange hashpartitioning(DEST_COUNTRY_NAME#38, 5), ENSURE_REQUIREMENTS, [id=#451]
+      +- *(1) HashAggregate(keys=[DEST_COUNTRY_NAME#38], functions=[partial_sum(cast(count#40 as bigint))])
+         +- FileScan csv [DEST_COUNTRY_NAME#38,count#40] Batched: false, DataFilters: [], Format: CSV, Location: InMemoryFileIndex[file:/Users/dibyajyoti/Desktop/2015-summary.csv], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<DEST_COUNTRY_NAME:string,count:int>
+
+
+---CHAPTER3 : A Gentle Introduction to Spark ----
+
+
+sc=spark.sparkContext
+>>> rdd1=sc.parallelize([1,2,3])
+>>> rdd1
+ParallelCollectionRDD[150] at readRDDFromFile at PythonRDD.scala:274
+
+>>> from pyspark.sql import Row
+
+>>> rdd1=sc.parallelize([Row(1),Row(2),Row(3)]).toDF()
+>>> rdd1
+DataFrame[_1: bigint]
+>>> rdd1.printSchema()
+root
+ |-- _1: long (nullable = true)
+
+>>> rdd1.show()
++---+
+| _1|
++---+
+|  1|
+|  2|
+|  3|
++---+
+
+
+---CHAPTER4 : STRUCTURED API OVERVIEW ---
+
+STRUCTURED Api's are the way where we will write majority of our data flows.
+Spark is a distributed programming model or unified platform where user's specify the transformations they want to 
+execute on logical structures like dataframe or datasets. The transformations are nothing but set of instructions for manipulating
+the distributed collection of data. Since core data structures in spark are immutable so applyting these transformations
+result in creation of a new dataset/dataframe . Transformations build up a logical plan in form of dag instructions.
+When we call an action, it triggers the computation of result of each transformation or operation that are chained 
+in form of instructions as part of single job by executing in form of stages and tasks across the cluster.
+To create a new dataframe or dataset we call transformation. To compute result or store it in a native
+language types we call action.
+
+
+
+>>> df1=spark.range(4).toDF("number")
+>>> df1.select(df1["number"]+10)
+DataFrame[(number + 10): bigint]
+>>> df1.select(df1["number"]+10).show()
++-------------+
+|(number + 10)|
++-------------+
+|           10|
+|           11|
+|           12|
+|           13|
++-------------+
+
+>>> df1
+DataFrame[number: bigint]
+>>> df1.printSchema()
+root
+ |-- number: long (nullable = false)
+
+>>> 
+
+--Structed API execution --
+
+Structured API execution has basically three steps:
+1. Writing dataframe/dataset/sql code.
+2. If the code is valid, spark converts into a logical plan.
+3. The logical plan then passes through a catalyst optimizer to transform into a physical plan
+checking optimizations on the way.
+4. The physical plan (rdd manipulations) is then executed on the spark clusers.
+
+To execute a code, we must write code . The code is then submitted to spark cluster either via spark shell or using spark-submit job.
+The code then goes through catalyst optimiser which decides the code layout and how it should be executed. It gives
+the physical plan and then it executed in the cluster.
+
+
+Basically the steps are generation of optmi plan are below:
+
+													Analyzer					Logical optimization
+SQL code	->	|										|						 |
+DF code 	->	|->USER CODE -> unresolved logical plan -> Resolved logical plan -> optimed logical plan
+Dataset code->	|										|
+													Catalog
+													
+
+Spark convert's user code into a unresolved logical plan .The code might be correct but the analyzer refers to the catalog
+repository to check whether the dataframe, table,columns which are referred in user code are actually existing or not.
+The catalog is a repository of dataframe information and all tables.
+If the analyzer can resolves it then it is passed to catalyst optimizer to apply some optimizations on the way, and defined
+set of rules and configuration such as predicate push down or selections. This steps lead to creation of
+optimized logical plan.
+
+Now as we have the optimized logical plan, spark then begins the physical planning process.
+The physical plan or spark plan. It basically gives the layout of how the plan will be executed in the cluster by
+generating various physical plan execution strategies and comparing them through a cost model.
+For example if we have join operation, it checks the table attributes, size and partition size and give 
+an physical plan. It results into a set of rdd's and transformation. Spark is often refered as compiler
+because it compiles the user code to rdd and transformations. RDD is lowest level interface and everything is built on top
+of rdd for efficient optimizations and execution.
+
+Upon selecting physical plan , spark runs all of this code over rdd's the lowest level programming interface of spark.
+Also it performs some kind of optimizations during runtime by generative java native bytecode which can even eliminate
+task and stages. Finally result is returned to user.
+
+
+---Chapter 5: Basic Structured Operations---
+
+>>> df3=spark.read.format('csv').load('/Users/dibyajyoti/Desktop/2015-summary.json')
+>>> df3.printSchema()
+root
+ |-- _c0: string (nullable = true)
+ |-- _c1: string (nullable = true)
+ |-- _c2: string (nullable = true)
+
+>>> df3.take(3)
+[Row(_c0='{"ORIGIN_COUNTRY_NAME":"Romania"', _c1='"DEST_COUNTRY_NAME":"United States"', _c2='"count":15}'), Row(_c0='{"ORIGIN_COUNTRY_NAME":"Croatia"', _c1='"DEST_COUNTRY_NAME":"United States"', _c2='"count":1}'), Row(_c0='{"ORIGIN_COUNTRY_NAME":"Ireland"', _c1='"DEST_COUNTRY_NAME":"United States"', _c2='"count":344}')]
+>>> 
+
+>>> spark.read.format('csv').load('/Users/dibyajyoti/Desktop/2015-summary.json').schema
+StructType(List(StructField(_c0,StringType,true),StructField(_c1,StringType,true),StructField(_c2,StringType,true)))
+>>> 
+
+from pyspark.sql.types import StructField,StructType,StringType,LongType
+
+manualSchema=StructType([
+StructField("ORIGIN_COUNTRY_NAME",StringType(),True),
+StructField("DEST_COUNTRY_NAME",StringType(),True),
+StructField("count",LongType(),False,metadata={"hello":"world"})
+])
+
+>>> spark.read.format('csv').schema(manualSchema).load('/Users/dibyajyoti/Desktop/2015-summary.json').schema
+StructType(List(StructField(ORIGIN_COUNTRY_NAME,StringType,true),StructField(DEST_COUNTRY_NAME,StringType,true),StructField(count,LongType,true)))
+>>> 
+
+
+>>> manualSchemaDF=spark.read.format('csv').schema(manualSchema).load('/Users/dibyajyoti/Desktop/2015-summary.json')
+>>> manualSchemaDF.printSchema()
+root
+ |-- ORIGIN_COUNTRY_NAME: string (nullable = true)
+ |-- DEST_COUNTRY_NAME: string (nullable = true)
+ |-- count: long (nullable = true)
+ 
+ 
+Columns in DF are refered using col and columns.
+>>> from pyspark.sql.functions import col, column
+>>> col("count")
+Column<'count'>
+
+In spark each column represent a value which are computed per record basis by means of an expression.
+Now expressions are transformations which are applied on one or more values in a record in a dataframe. 
+expressions are just like functions that are applied on one or more columns as input and potentially
+applies more transformations to create a single value for each record in a dataset.
+
+expr("some col")
+
+
+
+>>> 
+>>> from pyspark.sql.functions import expr
+
+>>> spark.read.format('csv').schema(manualSchema).load('/Users/dibyajyoti/Desktop/2015-summary.json').columns
+['ORIGIN_COUNTRY_NAME', 'DEST_COUNTRY_NAME', 'count']
+>>> spark.read.format('csv').schema(manualSchema).load('/Users/dibyajyoti/Desktop/2015-summary.json').schema
+StructType(List(StructField(ORIGIN_COUNTRY_NAME,StringType,true),StructField(DEST_COUNTRY_NAME,StringType,true),StructField(count,LongType,true)))
+>>> spark.read.format('csv').schema(manualSchema).load('/Users/dibyajyoti/Desktop/2015-summary.json').printSchema()
+root
+ |-- ORIGIN_COUNTRY_NAME: string (nullable = true)
+ |-- DEST_COUNTRY_NAME: string (nullable = true)
+ |-- count: long (nullable = true)
+
+>>> 
+>>> manualSchemaDF.take(2)
+[Row(ORIGIN_COUNTRY_NAME='{"ORIGIN_COUNTRY_NAME":"Romania"', DEST_COUNTRY_NAME='"DEST_COUNTRY_NAME":"United States"', count=None), Row(ORIGIN_COUNTRY_NAME='{"ORIGIN_COUNTRY_NAME":"Croatia"', DEST_COUNTRY_NAME='"DEST_COUNTRY_NAME":"United States"', count=None)]
+>>> 
+
+>>> manualSchemaDF.first()
+Row(ORIGIN_COUNTRY_NAME='{"ORIGIN_COUNTRY_NAME":"Romania"', DEST_COUNTRY_NAME='"DEST_COUNTRY_NAME":"United States"', count=None)
+>>> 
+
+
+manualSchema=StructType([
+StructField("ORIGIN_COUNTRY_NAME",StringType(),True),
+StructField("DEST_COUNTRY_NAME",StringType(),True),
+StructField("count",StringType(),False,metadata={"hello":"world"})
+])
+
+>>> spark.read.format('csv').schema(manualSchema).load('/Users/dibyajyoti/Desktop/2015-summary.json').schema
+StructType(List(StructField(ORIGIN_COUNTRY_NAME,StringType,true),StructField(DEST_COUNTRY_NAME,StringType,true),StructField(count,StringType,true)))
+>>> manualSchemaDF=spark.read.format('csv').schema(manualSchema).load('/Users/dibyajyoti/Desktop/2015-summary.json')
+>>> manualSchemaDF.take(2)
+[Row(ORIGIN_COUNTRY_NAME='{"ORIGIN_COUNTRY_NAME":"Romania"', DEST_COUNTRY_NAME='"DEST_COUNTRY_NAME":"United States"', count='"count":15}'), Row(ORIGIN_COUNTRY_NAME='{"ORIGIN_COUNTRY_NAME":"Croatia"', DEST_COUNTRY_NAME='"DEST_COUNTRY_NAME":"United States"', count='"count":1}')]
+
+In Spark each record in a dataframe is a Row object. Spark manipulates Row object using expressions.
+Internally Row objects are represented as an array of bytes . The byte array interface are never shown to users because
+we only use column exprs to manipulate them.
+
+
+from pyspark.sql import Row
+row1=Row('india','Cricket','virat kohli',10)
+row2=Row('australia','Cricket','Steve Smith',99)
+
+>>> row1
+<Row('india', 'Cricket', 'virat kohli', 10)>
+>>> row2
+<Row('australia', 'Cricket', 'Steve Smith', 99)>
+>>> type(row1)
+<class 'pyspark.sql.types.Row'>
+
+>>> expr(row1[0]+row2[0])
+Column<'indiaaustralia'>
+>>> 
+
+
+Dataframe Transformations:
+1. Add rows or columns.
+2. remove rows or columns.
+3. transform a row into a column or a column into a row.
+4. sort data by values in a row.
+
+cricketSchema=StructType([
+StructField('Country',StringType(),True),
+StructField('Sports',StringType(),True),
+StructField('Captain',StringType(),True),
+StructField('Index',LongType(),True)
+])
+
+
+>>> cricketDF=spark.createDataFrame([row1,row2],cricketSchema)
+>>> cricketDF.collect()
+[Row(Country='india', Sports='Cricket', Captain='virat kohli', Index=10), Row(Country='australia', Sports='Cricket', Captain='Steve Smith', Index=99)]
+>>> cricketDF.printSchema()
+root
+ |-- Country: string (nullable = true)
+ |-- Sports: string (nullable = true)
+ |-- Captain: string (nullable = true)
+ |-- Index: long (nullable = true)
+
+>>> cricketDF.schema
+StructType(List(StructField(Country,StringType,true),StructField(Sports,StringType,true),StructField(Captain,StringType,true),StructField(Index,LongType,true)))
+>>> 
+
+>>> cricketDF.show()
++---------+-------+-----------+-----+
+|  Country| Sports|    Captain|Index|
++---------+-------+-----------+-----+
+|    india|Cricket|virat kohli|   10|
+|australia|Cricket|Steve Smith|   99|
++---------+-------+-----------+-----+
+
+>>> 
+
+select and selectExpr:
+
+select method (when working with columns and expressions) and selectExpr method (when working with expressions in string)
+
+
+>>> cricketDF.select("Country").show()
++---------+
+|  Country|
++---------+
+|    india|
+|australia|
++---------+
+
+>>> 
+>>> cricketDF.select("Country").count()
+2
+>>> cricketDF.select("Country").schema
+StructType(List(StructField(Country,StringType,true)))
+
+>>> cricketDF.createOrReplaceTempView('cricketTable')
+
+>>> res=spark.sql('''select Country,Sports from cricketTable''')
+>>> res.show()
++---------+-------+
+|  Country| Sports|
++---------+-------+
+|    india|Cricket|
+|australia|Cricket|
++---------+-------+
+
+
+>>> cricketDF.select("Country","Index").show()
++---------+-----+
+|  Country|Index|
++---------+-----+
+|    india|   10|
+|australia|   99|
++---------+-----+
+
+>>> cricketDF.select("Country","Index").show(1)
++-------+-----+
+|Country|Index|
++-------+-----+
+|  india|   10|
++-------+-----+
+only showing top 1 row
+
+>>> cricketDF.select(expr('Country'),expr('Index'),col('Captain')).show()
++---------+-----+-----------+
+|  Country|Index|    Captain|
++---------+-----+-----------+
+|    india|   10|virat kohli|
+|australia|   99|Steve Smith|
++---------+-----+-----------+
+
+>>> 
+
+>>> cricketDF.select(col('Country'),'Captain').show()
++---------+-----------+
+|  Country|    Captain|
++---------+-----------+
+|    india|virat kohli|
+|australia|Steve Smith|
++---------+-----------+
+
+>>> cricketDF.select(col('Country'),'Captain')
+DataFrame[Country: string, Captain: string]
+>>> 
+
+>>> cricketDF.select( expr('Country AS Destination')).show()
++-----------+
+|Destination|
++-----------+
+|      india|
+|  australia|
++-----------+
+>>> res=spark.sql('''select Country as Destination from cricketTable''')
+>>> res.show()
++-----------+
+|Destination|
++-----------+
+|      india|
+|  australia|
++-----------+
+
+>>> cricketDF.select( expr('Country AS Destination').alias('Country')).show()
++---------+
+|  Country|
++---------+
+|    india|
+|australia|
++---------+
+
+>>> cricketDF.selectExpr('Country as NewCountry','Country').show()
++----------+---------+
+|NewCountry|  Country|
++----------+---------+
+|     india|    india|
+| australia|australia|
++----------+---------+
+
+>>> manualSchemaDF.selectExpr("*","(ORIGIN_COUNTRY_NAME=DEST_COUNTRY_NAME) as withinCountry").show(n=10,truncate=False)
++--------------------------------------+-----------------------------------+------------+-------------+
+|ORIGIN_COUNTRY_NAME                   |DEST_COUNTRY_NAME                  |count       |withinCountry|
++--------------------------------------+-----------------------------------+------------+-------------+
+|{"ORIGIN_COUNTRY_NAME":"Romania"      |"DEST_COUNTRY_NAME":"United States"|"count":15} |false        |
+|{"ORIGIN_COUNTRY_NAME":"Croatia"      |"DEST_COUNTRY_NAME":"United States"|"count":1}  |false        |
+|{"ORIGIN_COUNTRY_NAME":"Ireland"      |"DEST_COUNTRY_NAME":"United States"|"count":344}|false        |
+|{"ORIGIN_COUNTRY_NAME":"United States"|"DEST_COUNTRY_NAME":"Egypt"        |"count":15} |false        |
+|{"ORIGIN_COUNTRY_NAME":"India"        |"DEST_COUNTRY_NAME":"United States"|"count":62} |false        |
+|{"ORIGIN_COUNTRY_NAME":"Singapore"    |"DEST_COUNTRY_NAME":"United States"|"count":1}  |false        |
+|{"ORIGIN_COUNTRY_NAME":"Grenada"      |"DEST_COUNTRY_NAME":"United States"|"count":62} |false        |
+|{"ORIGIN_COUNTRY_NAME":"United States"|"DEST_COUNTRY_NAME":"Costa Rica"   |"count":588}|false        |
+|{"ORIGIN_COUNTRY_NAME":"United States"|"DEST_COUNTRY_NAME":"Senegal"      |"count":40} |false        |
+|{"ORIGIN_COUNTRY_NAME":"United States"|"DEST_COUNTRY_NAME":"Moldova"      |"count":1}  |false        |
++--------------------------------------+-----------------------------------+------------+-------------+
+only showing top 10 rows
+
+(ORIGIN_COUNTRY_NAME=DEST_COUNTRY_NAME) as withinCountry
+
+
+>>> manualSchemaDF.createOrReplaceTempView("country")
+>>> spark.sql('''select avg(count),count(distinct(DEST_COUNTRY_NAME)) from country''').show(2)
++--------------------------+---------------------------------+
+|avg(CAST(count AS DOUBLE))|count(DISTINCT DEST_COUNTRY_NAME)|
++--------------------------+---------------------------------+
+|                      null|                              133|
++--------------------------+---------------------------------+
+
+>>> 
+
+
+>>> manualSchemaDF.selectExpr("*").show(n=10,truncate=False)
++--------------------------------------+-----------------------------------+------------+
+|ORIGIN_COUNTRY_NAME                   |DEST_COUNTRY_NAME                  |count       |
++--------------------------------------+-----------------------------------+------------+
+|{"ORIGIN_COUNTRY_NAME":"Romania"      |"DEST_COUNTRY_NAME":"United States"|"count":15} |
+|{"ORIGIN_COUNTRY_NAME":"Croatia"      |"DEST_COUNTRY_NAME":"United States"|"count":1}  |
+|{"ORIGIN_COUNTRY_NAME":"Ireland"      |"DEST_COUNTRY_NAME":"United States"|"count":344}|
+|{"ORIGIN_COUNTRY_NAME":"United States"|"DEST_COUNTRY_NAME":"Egypt"        |"count":15} |
+|{"ORIGIN_COUNTRY_NAME":"India"        |"DEST_COUNTRY_NAME":"United States"|"count":62} |
+|{"ORIGIN_COUNTRY_NAME":"Singapore"    |"DEST_COUNTRY_NAME":"United States"|"count":1}  |
+|{"ORIGIN_COUNTRY_NAME":"Grenada"      |"DEST_COUNTRY_NAME":"United States"|"count":62} |
+|{"ORIGIN_COUNTRY_NAME":"United States"|"DEST_COUNTRY_NAME":"Costa Rica"   |"count":588}|
+|{"ORIGIN_COUNTRY_NAME":"United States"|"DEST_COUNTRY_NAME":"Senegal"      |"count":40} |
+|{"ORIGIN_COUNTRY_NAME":"United States"|"DEST_COUNTRY_NAME":"Moldova"      |"count":1}  |
++--------------------------------------+-----------------------------------+------------+
+only showing top 10 rows
+
+>>> manualSchemaDF.select(expr("*"),lit(1).alias("newcolumn")).show(n=3,truncate=False)
++--------------------------------+-----------------------------------+------------+---------+
+|ORIGIN_COUNTRY_NAME             |DEST_COUNTRY_NAME                  |count       |newcolumn|
++--------------------------------+-----------------------------------+------------+---------+
+|{"ORIGIN_COUNTRY_NAME":"Romania"|"DEST_COUNTRY_NAME":"United States"|"count":15} |1        |
+|{"ORIGIN_COUNTRY_NAME":"Croatia"|"DEST_COUNTRY_NAME":"United States"|"count":1}  |1        |
+|{"ORIGIN_COUNTRY_NAME":"Ireland"|"DEST_COUNTRY_NAME":"United States"|"count":344}|1        |
++--------------------------------+-----------------------------------+------------+---------+
+only showing top 3 rows
+
+>>> manualSchemaDF.select(expr("*"),lit(1).alias("newcolumn"),expr("(ORIGIN_COUNTRY_NAME=DEST_COUNTRY_NAME) as withinCountry")).show(n=3,truncate=False)
++--------------------------------+-----------------------------------+------------+---------+-------------+
+|ORIGIN_COUNTRY_NAME             |DEST_COUNTRY_NAME                  |count       |newcolumn|withinCountry|
++--------------------------------+-----------------------------------+------------+---------+-------------+
+|{"ORIGIN_COUNTRY_NAME":"Romania"|"DEST_COUNTRY_NAME":"United States"|"count":15} |1        |false        |
+|{"ORIGIN_COUNTRY_NAME":"Croatia"|"DEST_COUNTRY_NAME":"United States"|"count":1}  |1        |false        |
+|{"ORIGIN_COUNTRY_NAME":"Ireland"|"DEST_COUNTRY_NAME":"United States"|"count":344}|1        |false        |
++--------------------------------+-----------------------------------+------------+---------+-------------+
+only showing top 3 rows
+
+
+>>> manualSchemaDF.withColumn("newColumn",lit(1)).show(3)
++--------------------+--------------------+------------+---------+
+| ORIGIN_COUNTRY_NAME|   DEST_COUNTRY_NAME|       count|newColumn|
++--------------------+--------------------+------------+---------+
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...| "count":15}|        1|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|  "count":1}|        1|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|"count":344}|        1|
++--------------------+--------------------+------------+---------+
+only showing top 3 rows
+
+
+>>> manualSchemaDF.withColumn("withinCountry",expr("ORIGIN_COUNTRY_NAME=DEST_COUNTRY_NAME")).show(2)
++--------------------+--------------------+-----------+-------------+
+| ORIGIN_COUNTRY_NAME|   DEST_COUNTRY_NAME|      count|withinCountry|
++--------------------+--------------------+-----------+-------------+
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|"count":15}|        false|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...| "count":1}|        false|
++--------------------+--------------------+-----------+-------------+
+only showing top 2 rows
+
+
+>>> manualSchemaDF.withColumn("Destination",expr("ORIGIN_COUNTRY_NAME")).columns
+['ORIGIN_COUNTRY_NAME', 'DEST_COUNTRY_NAME', 'count', 'Destination']
+>>> 
+
+>>> manualSchemaDF.withColumn("Destination",expr("ORIGIN_COUNTRY_NAME")).show(n=2,truncate=False)
++--------------------------------+-----------------------------------+-----------+--------------------------------+
+|ORIGIN_COUNTRY_NAME             |DEST_COUNTRY_NAME                  |count      |Destination                     |
++--------------------------------+-----------------------------------+-----------+--------------------------------+
+|{"ORIGIN_COUNTRY_NAME":"Romania"|"DEST_COUNTRY_NAME":"United States"|"count":15}|{"ORIGIN_COUNTRY_NAME":"Romania"|
+|{"ORIGIN_COUNTRY_NAME":"Croatia"|"DEST_COUNTRY_NAME":"United States"|"count":1} |{"ORIGIN_COUNTRY_NAME":"Croatia"|
++--------------------------------+-----------------------------------+-----------+--------------------------------+
+only showing top 2 rows
+
+
+>>> spark.sql('''select *,ORIGIN_COUNTRY_NAME as Destination from country limit 2''').show()
++--------------------+--------------------+-----------+--------------------+
+| ORIGIN_COUNTRY_NAME|   DEST_COUNTRY_NAME|      count|         Destination|
++--------------------+--------------------+-----------+--------------------+
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|"count":15}|{"ORIGIN_COUNTRY_...|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...| "count":1}|{"ORIGIN_COUNTRY_...|
++--------------------+--------------------+-----------+--------------------+
+
+>>> 
+>>> manualSchemaDF.withColumnRenamed('ORIGIN_COUNTRY_NAME' ,'Source').show(2)
++--------------------+--------------------+-----------+
+|              Source|   DEST_COUNTRY_NAME|      count|
++--------------------+--------------------+-----------+
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|"count":15}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...| "count":1}|
++--------------------+--------------------+-----------+
+only showing top 2 rows
+
+>>> 
+
+set spark.sql.caseSensitive true
+
+to add column to dataframe we use df.withColumn('new col name', expr()).show()
+
+to drop column df.drop('name of col').columns
+df.drop('col1','col2')
+
+type cast a column
+>>> manualSchemaDF.withColumn("count2",col("count").cast("long"))
+DataFrame[ORIGIN_COUNTRY_NAME: string, DEST_COUNTRY_NAME: string, count: string, count2: bigint]
+>>> 
+
+>>> manualSchemaDF.where(col("ORIGIN_COUNTRY_NAME") != "United States").show(n=3,truncate=False)
++--------------------------------+-----------------------------------+------------+
+|ORIGIN_COUNTRY_NAME             |DEST_COUNTRY_NAME                  |count       |
++--------------------------------+-----------------------------------+------------+
+|{"ORIGIN_COUNTRY_NAME":"Romania"|"DEST_COUNTRY_NAME":"United States"|"count":15} |
+|{"ORIGIN_COUNTRY_NAME":"Croatia"|"DEST_COUNTRY_NAME":"United States"|"count":1}  |
+|{"ORIGIN_COUNTRY_NAME":"Ireland"|"DEST_COUNTRY_NAME":"United States"|"count":344}|
++--------------------------------+-----------------------------------+------------+
+only showing top 3 rows
+
+>>> manualSchemaDF.withColumn("count2",lit(13)).where((col("count2").cast("long").alias("count3")) >= 13).show(3)
++--------------------+--------------------+------------+------+
+| ORIGIN_COUNTRY_NAME|   DEST_COUNTRY_NAME|       count|count2|
++--------------------+--------------------+------------+------+
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...| "count":15}|    13|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|  "count":1}|    13|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|"count":344}|    13|
++--------------------+--------------------+------------+------+
+only showing top 3 rows
+
+>>> manualSchemaDF.withColumn("count2",lit(13)).filter((col("count2").cast("long").alias("count3")) >= 13).show(3)
++--------------------+--------------------+------------+------+
+| ORIGIN_COUNTRY_NAME|   DEST_COUNTRY_NAME|       count|count2|
++--------------------+--------------------+------------+------+
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...| "count":15}|    13|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|  "count":1}|    13|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|"count":344}|    13|
++--------------------+--------------------+------------+------+
+only showing top 3 rows
+
+>>> manualSchemaDF.select(col("DEST_COUNTRY_NAME")).distinct().count()
+133
+>>> manualSchemaDF.select(col("DEST_COUNTRY_NAME")).distinct().show(2)
++--------------------+
+|   DEST_COUNTRY_NAME|
++--------------------+
+|"DEST_COUNTRY_NAM...|
+|"DEST_COUNTRY_NAM...|
++--------------------+
+only showing top 2 rows
+
+>>> manualSchemaDF.select(col("DEST_COUNTRY_NAME")).distinct().show(10,truncate=False)
++-----------------------------------------+
+|DEST_COUNTRY_NAME                        |
++-----------------------------------------+
+|"DEST_COUNTRY_NAME":"Egypt"              |
+|"DEST_COUNTRY_NAME":"Guyana"             |
+|"DEST_COUNTRY_NAME":"Algeria"            |
+|"DEST_COUNTRY_NAME":"Luxembourg"         |
+|"DEST_COUNTRY_NAME":"Switzerland"        |
+|"DEST_COUNTRY_NAME":"Sint Maarten"       |
+|"DEST_COUNTRY_NAME":"Trinidad and Tobago"|
+|"DEST_COUNTRY_NAME":"Latvia"             |
+|"DEST_COUNTRY_NAME":"Thailand"           |
+|"DEST_COUNTRY_NAME":"Malaysia"           |
++-----------------------------------------+
+only showing top 10 rows
+
+>>> manualSchemaDF.select(col("DEST_COUNTRY_NAME"),col("ORIGIN_COUNTRY_NAME")).distinct().show(10,truncate=False)
++-----------------------------------------+--------------------------------------+
+|DEST_COUNTRY_NAME                        |ORIGIN_COUNTRY_NAME                   |
++-----------------------------------------+--------------------------------------+
+|"DEST_COUNTRY_NAME":"United States"      |{"ORIGIN_COUNTRY_NAME":"Singapore"    |
+|"DEST_COUNTRY_NAME":"Senegal"            |{"ORIGIN_COUNTRY_NAME":"United States"|
+|"DEST_COUNTRY_NAME":"Bolivia"            |{"ORIGIN_COUNTRY_NAME":"United States"|
+|"DEST_COUNTRY_NAME":"United States"      |{"ORIGIN_COUNTRY_NAME":"Russia"       |
+|"DEST_COUNTRY_NAME":"Pakistan"           |{"ORIGIN_COUNTRY_NAME":"United States"|
+|"DEST_COUNTRY_NAME":"United States"      |{"ORIGIN_COUNTRY_NAME":"Netherlands"  |
+|"DEST_COUNTRY_NAME":"United States"      |{"ORIGIN_COUNTRY_NAME":"Senegal"      |
+|"DEST_COUNTRY_NAME":"Trinidad and Tobago"|{"ORIGIN_COUNTRY_NAME":"United States"|
+|"DEST_COUNTRY_NAME":"United States"      |{"ORIGIN_COUNTRY_NAME":"Ecuador"      |
+|"DEST_COUNTRY_NAME":"Mexico"             |{"ORIGIN_COUNTRY_NAME":"United States"|
++-----------------------------------------+--------------------------------------+
+only showing top 10 rows
+
+
+appendnewSchema=manualSchemaDF.schema
+newRows=[Row("India","Portugal",19),Row("Spain","Lisbon",20),Row("Japan","Kenya",13)]
+parallelizeRows=sc.parallelize(newRows)
+newDF=spark.createDataFrame(parallelizeRows,appendnewSchema) /*or spark.createDataFrame(newRows,appendnewSchema) */
+
+>>> newDF.columns
+['ORIGIN_COUNTRY_NAME', 'DEST_COUNTRY_NAME', 'count']
+>>> newDF.show()
++-------------------+-----------------+-----+
+|ORIGIN_COUNTRY_NAME|DEST_COUNTRY_NAME|count|
++-------------------+-----------------+-----+
+|              India|         Portugal|   19|
+|              Spain|           Lisbon|   20|
+|              Japan|            Kenya|   13|
++-------------------+---------------
+
+>>> manualSchemaDF.union(newDF).where(col("ORIGIN_COUNTRY_NAME")=="India").show(10,truncate=False)
++-------------------+-----------------+-----+
+|ORIGIN_COUNTRY_NAME|DEST_COUNTRY_NAME|count|
++-------------------+-----------------+-----+
+|India              |Portugal         |19   |
++-------------------+-----------------+-----+
+
+>>> manualSchemaDF.union(newDF).where(col("count")>10).where(col("DEST_COUNTRY_NAME")!="Egypt").show(10,truncate=False)
++-------------------+-----------------+-----+
+|ORIGIN_COUNTRY_NAME|DEST_COUNTRY_NAME|count|
++-------------------+-----------------+-----+
+|India              |Portugal         |19   |
+|Spain              |Lisbon           |20   |
+|Japan              |Kenya            |13   |
++-------------------+-----------------+-----+
+
+>>> manualSchemaDF.orderBy(col("count").desc()).show(10)
++--------------------+--------------------+-------------+
+| ORIGIN_COUNTRY_NAME|   DEST_COUNTRY_NAME|        count|
++--------------------+--------------------+-------------+
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...| "count":986}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...| "count":955}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...| "count":952}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...| "count":935}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...| "count":920}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|  "count":90}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...| "count":873}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...| "count":867}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...| "count":853}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|"count":8483}|
++--------------------+--------------------+-------------+
+only showing top 10 rows
+
+>>> manualSchemaDF.orderBy(col("count").asc()).show(10)
++--------------------+--------------------+---------------+
+| ORIGIN_COUNTRY_NAME|   DEST_COUNTRY_NAME|          count|
++--------------------+--------------------+---------------+
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...| Sint Eustatius|
+|{"ORIGIN_COUNTRY_...|      Sint Eustatius|      and Saba"|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|  "count":1048}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|   "count":107}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|   "count":108}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|   "count":109}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|   "count":111}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|   "count":115}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|   "count":117}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|   "count":118}|
++--------------------+--------------------+---------------+
+only showing top 10 rows
+
+>>> manualSchemaDF.orderBy(col("count"),col("ORIGIN_COUNTRY_NAME")).show(10,truncate=False)
++--------------------------------------------+--------------------------------------------+---------------+
+|ORIGIN_COUNTRY_NAME                         |DEST_COUNTRY_NAME                           |count          |
++--------------------------------------------+--------------------------------------------+---------------+
+|{"ORIGIN_COUNTRY_NAME":"United States"      |"DEST_COUNTRY_NAME":"Bonaire                | Sint Eustatius|
+|{"ORIGIN_COUNTRY_NAME":"Bonaire             | Sint Eustatius                             | and Saba"     |
+|{"ORIGIN_COUNTRY_NAME":"United States"      |"DEST_COUNTRY_NAME":"South Korea"           |"count":1048}  |
+|{"ORIGIN_COUNTRY_NAME":"United States"      |"DEST_COUNTRY_NAME":"British Virgin Islands"|"count":107}   |
+|{"ORIGIN_COUNTRY_NAME":"United States"      |"DEST_COUNTRY_NAME":"Qatar"                 |"count":108}   |
+|{"ORIGIN_COUNTRY_NAME":"Qatar"              |"DEST_COUNTRY_NAME":"United States"         |"count":109}   |
+|{"ORIGIN_COUNTRY_NAME":"United States"      |"DEST_COUNTRY_NAME":"New Zealand"           |"count":111}   |
+|{"ORIGIN_COUNTRY_NAME":"Norway"             |"DEST_COUNTRY_NAME":"United States"         |"count":115}   |
+|{"ORIGIN_COUNTRY_NAME":"Antigua and Barbuda"|"DEST_COUNTRY_NAME":"United States"         |"count":117}   |
+|{"ORIGIN_COUNTRY_NAME":"United States"      |"DEST_COUNTRY_NAME":"Sweden"                |"count":118}   |
++--------------------------------------------+--------------------------------------------+---------------+
+only showing top 10 rows
+
+
+>>> manualSchemaDF.orderBy(col("count").desc(),col("ORIGIN_COUNTRY_NAME").asc()).show(10,truncate=False)
++--------------------------------------+-----------------------------------+-------------+
+|ORIGIN_COUNTRY_NAME                   |DEST_COUNTRY_NAME                  |count        |
++--------------------------------------+-----------------------------------+-------------+
+|{"ORIGIN_COUNTRY_NAME":"The Bahamas"  |"DEST_COUNTRY_NAME":"United States"|"count":986} |
+|{"ORIGIN_COUNTRY_NAME":"United States"|"DEST_COUNTRY_NAME":"The Bahamas"  |"count":955} |
+|{"ORIGIN_COUNTRY_NAME":"France"       |"DEST_COUNTRY_NAME":"United States"|"count":952} |
+|{"ORIGIN_COUNTRY_NAME":"United States"|"DEST_COUNTRY_NAME":"France"       |"count":935} |
+|{"ORIGIN_COUNTRY_NAME":"China"        |"DEST_COUNTRY_NAME":"United States"|"count":920} |
+|{"ORIGIN_COUNTRY_NAME":"United States"|"DEST_COUNTRY_NAME":"Curacao"      |"count":90}  |
+|{"ORIGIN_COUNTRY_NAME":"United States"|"DEST_COUNTRY_NAME":"Colombia"     |"count":873} |
+|{"ORIGIN_COUNTRY_NAME":"Colombia"     |"DEST_COUNTRY_NAME":"United States"|"count":867} |
+|{"ORIGIN_COUNTRY_NAME":"United States"|"DEST_COUNTRY_NAME":"Brazil"       |"count":853} |
+|{"ORIGIN_COUNTRY_NAME":"Canada"       |"DEST_COUNTRY_NAME":"United States"|"count":8483}|
++--------------------------------------+-----------------------------------+-------------+
+only showing top 10 rows
+
+>>> manualSchemaDF.orderBy(expr("count desc")).show(10)
++--------------------+--------------------+---------------+
+| ORIGIN_COUNTRY_NAME|   DEST_COUNTRY_NAME|          count|
++--------------------+--------------------+---------------+
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...| Sint Eustatius|
+|{"ORIGIN_COUNTRY_...|      Sint Eustatius|      and Saba"|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|  "count":1048}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|   "count":107}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|   "count":108}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|   "count":109}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|   "count":111}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|   "count":115}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|   "count":117}|
+|{"ORIGIN_COUNTRY_...|"DEST_COUNTRY_NAM...|   "count":118}|
++--------------------+--------------------+---------------+
+only showing top 10 rows
+
+
+>>> manualSchemaDF.orderBy(col("count"),col("ORIGIN_COUNTRY_NAME")).limit(4).show(truncate=False)
++--------------------------------------+--------------------------------------------+---------------+
+|ORIGIN_COUNTRY_NAME                   |DEST_COUNTRY_NAME                           |count          |
++--------------------------------------+--------------------------------------------+---------------+
+|{"ORIGIN_COUNTRY_NAME":"United States"|"DEST_COUNTRY_NAME":"Bonaire                | Sint Eustatius|
+|{"ORIGIN_COUNTRY_NAME":"Bonaire       | Sint Eustatius                             | and Saba"     |
+|{"ORIGIN_COUNTRY_NAME":"United States"|"DEST_COUNTRY_NAME":"South Korea"           |"count":1048}  |
+|{"ORIGIN_COUNTRY_NAME":"United States"|"DEST_COUNTRY_NAME":"British Virgin Islands"|"count":107}   |
++--------------------------------------+--------------------------------------------+---------------+
+
+
+>>> spark.read.format('csv').schema(manualSchema).load('/Users/dibyajyoti/Desktop/2015-summary.json').sortWithinPartitions("count").show(10,truncate=False)
++--------------------------------------------+--------------------------------------------+---------------+
+|ORIGIN_COUNTRY_NAME                         |DEST_COUNTRY_NAME                           |count          |
++--------------------------------------------+--------------------------------------------+---------------+
+|{"ORIGIN_COUNTRY_NAME":"United States"      |"DEST_COUNTRY_NAME":"Bonaire                | Sint Eustatius|
+|{"ORIGIN_COUNTRY_NAME":"Bonaire             | Sint Eustatius                             | and Saba"     |
+|{"ORIGIN_COUNTRY_NAME":"United States"      |"DEST_COUNTRY_NAME":"South Korea"           |"count":1048}  |
+|{"ORIGIN_COUNTRY_NAME":"United States"      |"DEST_COUNTRY_NAME":"British Virgin Islands"|"count":107}   |
+|{"ORIGIN_COUNTRY_NAME":"United States"      |"DEST_COUNTRY_NAME":"Qatar"                 |"count":108}   |
+|{"ORIGIN_COUNTRY_NAME":"Qatar"              |"DEST_COUNTRY_NAME":"United States"         |"count":109}   |
+|{"ORIGIN_COUNTRY_NAME":"United States"      |"DEST_COUNTRY_NAME":"New Zealand"           |"count":111}   |
+|{"ORIGIN_COUNTRY_NAME":"Norway"             |"DEST_COUNTRY_NAME":"United States"         |"count":115}   |
+|{"ORIGIN_COUNTRY_NAME":"Antigua and Barbuda"|"DEST_COUNTRY_NAME":"United States"         |"count":117}   |
+|{"ORIGIN_COUNTRY_NAME":"United States"      |"DEST_COUNTRY_NAME":"Sweden"                |"count":118}   |
++--------------------------------------------+--------------------------------------------+---------------+
+only showing top 10 rows
+
+
+repartition and coalesce are optimizing opportunity to repartition the data based on frequently filtered columns.
+It basically changes the physical layout of data location on the cluster based on the number of partitions and partioning schema.
+
+We should repartition the data when the number of future partitions are more then the current one. 
+Repartition lead to a full shuffle across cluster whereas coalesce basically combine partitions.
+It will shuffle/group the data based on the values of the column into number of partitions specified and then coalesce them.
+So all values for that column will be laying out within those partition only.
+
+1
+>>> manualSchemaDF.repartition(4,col("DEST_COUNTRY_NAME"))
+DataFrame[ORIGIN_COUNTRY_NAME: string, DEST_COUNTRY_NAME: string, count: string]
+>>> manualSchemaDF.rdd.getNumPartitions()
+1
+>>> manualSchemaDF.repartition(10)
+DataFrame[ORIGIN_COUNTRY_NAME: string, DEST_COUNTRY_NAME: string, count: string]
+>>> manualSchemaDF.rdd.getNumPartitions()
+1
+>>> 
+>>> manualSchemaDF.repartition(4,col("DEST_COUNTRY_NAME")).coalesce(2)
+DataFrame[ORIGIN_COUNTRY_NAME: string, DEST_COUNTRY_NAME: string, count: string]
+>>> 
+
+coalesce does partition merging within same node into 1 partition without incurring all node full shuffle.
+Repartition is helpful as it lead to load balancing by distributing data across all nodes in a cluster.
+When goal is reduce the number of partition then go for coalesce. Both can lead to significant
+performance gain even during joins or before execute a cache call.
+
+Spark maintains state of cluster in the driver. There are times when we get to get some/all data from
+the dataframe to the driver in order to manipulate them.
+Collect()-> entire dataframe
+take(n) -> fetches first N rows.
+show()-> prints out nicely
+
+Any collection of data to driver can be a very expensive operation. if we have a large dataset and call collect
+then it can crash the entire driver node.
+Other way is to iterate over the dataset partition by partition using function -> toLocalIterator
+But again here we iterate partition by partition one by one , the method collects partitions to the driver
+as an iterator, so we iterate entire dataset partition by partiton in a serial manner.
+
+
+---CHAPTER8 : Joins ----
+
+Different types of joins in spark:
+
+1. Inner join
+2. outer join
+3. left outer
+4. right outer 
+5. Left semi joins
+6. Left anti joins
+7. Natural joins
+8. Cross(cartesian) joins
+
+
+person = spark.createDataFrame([
+(0, "Bill Chambers", 0, [100]),
+(1, "Matei Zaharia", 1, [500, 250, 100]),
+(2, "Michael Armbrust", 1, [250, 100])])\
+.toDF("id", "name", "graduate_program", "spark_status")
+
+graduateProgram = spark.createDataFrame([
+(0, "Masters", "School of Information", "UC Berkeley"),
+(2, "Masters", "EECS", "UC Berkeley"),
+(1, "Ph.D.", "EECS", "UC Berkeley")])\
+.toDF("id", "degree", "department", "school")
+
+sparkStatus = spark.createDataFrame([
+(500, "Vice President"),
+(250, "PMC Member"),
+(100, "Contributor")])\
+.toDF("id", "status")
+
+
+person.createOrReplaceTempView("person")
+graduateProgram.createOrReplaceTempView("graduateProgram")
+sparkStatus.createOrReplaceTempView("sparkStatus")
+
+INNER JOIN:
+
+>>> joinexpression=person["graduate_program"]== graduateProgram["id"]
+>>> person.join(graduateProgram,joinexpression).show()
++---+----------------+----------------+---------------+---+-------+--------------------+-----------+
+| id|            name|graduate_program|   spark_status| id| degree|          department|     school|
++---+----------------+----------------+---------------+---+-------+--------------------+-----------+
+|  0|   Bill Chambers|               0|          [100]|  0|Masters|School of Informa...|UC Berkeley|
+|  1|   Matei Zaharia|               1|[500, 250, 100]|  1|  Ph.D.|                EECS|UC Berkeley|
+|  2|Michael Armbrust|               1|     [250, 100]|  1|  Ph.D.|                EECS|UC Berkeley|
++---+----------------+----------------+---------------+---+-------+--------------------+-----------+
+
+>>> spark.sql('''select * from person join graduateProgram on person.graduate_program=graduateProgram.id''').show()
++---+----------------+----------------+---------------+---+-------+--------------------+-----------+
+| id|            name|graduate_program|   spark_status| id| degree|          department|     school|
++---+----------------+----------------+---------------+---+-------+--------------------+-----------+
+|  0|   Bill Chambers|               0|          [100]|  0|Masters|School of Informa...|UC Berkeley|
+|  1|   Matei Zaharia|               1|[500, 250, 100]|  1|  Ph.D.|                EECS|UC Berkeley|
+|  2|Michael Armbrust|               1|     [250, 100]|  1|  Ph.D.|                EECS|UC Berkeley|
++---+----------------+----------------+---------------+---+-------+--------------------+-----------+
+
+>>> joinType="inner"
+>>> person.join(graduateProgram,joinexpression,joinType).show()
++---+----------------+----------------+---------------+---+-------+--------------------+-----------+
+| id|            name|graduate_program|   spark_status| id| degree|          department|     school|
++---+----------------+----------------+---------------+---+-------+--------------------+-----------+
+|  0|   Bill Chambers|               0|          [100]|  0|Masters|School of Informa...|UC Berkeley|
+|  1|   Matei Zaharia|               1|[500, 250, 100]|  1|  Ph.D.|                EECS|UC Berkeley|
+|  2|Michael Armbrust|               1|     [250, 100]|  1|  Ph.D.|                EECS|UC Berkeley|
++---+----------------+----------------+---------------+---+-------+--------------------+-----------+
+
+OUTER JOIN:
+
+>>> person.show()
++---+----------------+----------------+---------------+
+| id|            name|graduate_program|   spark_status|
++---+----------------+----------------+---------------+
+|  0|   Bill Chambers|               0|          [100]|
+|  1|   Matei Zaharia|               1|[500, 250, 100]|
+|  2|Michael Armbrust|               1|     [250, 100]|
++---+----------------+----------------+---------------+
+
+>>> graduateProgram.show()
++---+-------+--------------------+-----------+
+| id| degree|          department|     school|
++---+-------+--------------------+-----------+
+|  0|Masters|School of Informa...|UC Berkeley|
+|  2|Masters|                EECS|UC Berkeley|
+|  1|  Ph.D.|                EECS|UC Berkeley|
++---+-------+--------------------+-----------+
+
+>>> joinType="outer"
+>>> person.join(graduateProgram,joinexpression,joinType).show()
++----+----------------+----------------+---------------+---+-------+--------------------+-----------+
+|  id|            name|graduate_program|   spark_status| id| degree|          department|     school|
++----+----------------+----------------+---------------+---+-------+--------------------+-----------+
+|   0|   Bill Chambers|               0|          [100]|  0|Masters|School of Informa...|UC Berkeley|
+|null|            null|            null|           null|  2|Masters|                EECS|UC Berkeley|
+|   1|   Matei Zaharia|               1|[500, 250, 100]|  1|  Ph.D.|                EECS|UC Berkeley|
+|   2|Michael Armbrust|               1|     [250, 100]|  1|  Ph.D.|                EECS|UC Berkeley|
++----+----------------+----------------+---------------+---+-------+--------------------+-----------+
+
+
+LEFT OUTER:
+
+
+
+>>> joinType="left_outer"
+>>> person.join(graduateProgram,joinexpression,joinType).show()
++---+----------------+----------------+---------------+---+-------+--------------------+-----------+
+| id|            name|graduate_program|   spark_status| id| degree|          department|     school|
++---+----------------+----------------+---------------+---+-------+--------------------+-----------+
+|  0|   Bill Chambers|               0|          [100]|  0|Masters|School of Informa...|UC Berkeley|
+|  1|   Matei Zaharia|               1|[500, 250, 100]|  1|  Ph.D.|                EECS|UC Berkeley|
+|  2|Michael Armbrust|               1|     [250, 100]|  1|  Ph.D.|                EECS|UC Berkeley|
++---+----------------+----------------+---------------+---+-------+--------------------+-----------+
+
+RIGHT OUTER:
+
+>>> joinType="right_outer"
+>>> person.join(graduateProgram,joinexpression,joinType).show()
++----+----------------+----------------+---------------+---+-------+--------------------+-----------+
+|  id|            name|graduate_program|   spark_status| id| degree|          department|     school|
++----+----------------+----------------+---------------+---+-------+--------------------+-----------+
+|   0|   Bill Chambers|               0|          [100]|  0|Masters|School of Informa...|UC Berkeley|
+|null|            null|            null|           null|  2|Masters|                EECS|UC Berkeley|
+|   1|   Matei Zaharia|               1|[500, 250, 100]|  1|  Ph.D.|                EECS|UC Berkeley|
+|   2|Michael Armbrust|               1|     [250, 100]|  1|  Ph.D.|                EECS|UC Berkeley|
++----+---
+
+LEFT SEMI:
+It will check(compare) if the join key in left dataframe exists in the right dataframe, if only it exists in right dataframe
+then it will include left row to result. It wont include any row from right dataset. It only validates true for false.
+
+>>> person1=person.union(spark.createDataFrame([(4,"Anshuman",3,[200,800])]))
+>>> person1.show()
++---+----------------+----------------+---------------+
+| id|            name|graduate_program|   spark_status|
++---+----------------+----------------+---------------+
+|  0|   Bill Chambers|               0|          [100]|
+|  1|   Matei Zaharia|               1|[500, 250, 100]|
+|  2|Michael Armbrust|               1|     [250, 100]|
+|  4|        Anshuman|               3|     [200, 800]|
++---+----------------+----------------+---------------+
+
+>>> joinExpressionNew=person1["graduate_program"]==graduateProgram3["id"]
+
+
+>>> person1.show()
++---+----------------+----------------+---------------+
+| id|            name|graduate_program|   spark_status|
++---+----------------+----------------+---------------+
+|  0|   Bill Chambers|               0|          [100]|
+|  1|   Matei Zaharia|               1|[500, 250, 100]|
+|  2|Michael Armbrust|               1|     [250, 100]|
+|  4|        Anshuman|               3|     [200, 800]|
++---+----------------+----------------+---------------+
+
+>>> graduateProgram3.show()
++---+-------+--------------------+-----------------+
+| id| degree|          department|           school|
++---+-------+--------------------+-----------------+
+|  0|Masters|School of Informa...|      UC Berkeley|
+|  2|Masters|                EECS|      UC Berkeley|
+|  1|  Ph.D.|                EECS|      UC Berkeley|
+|  0|Masters|       DuplicatedRow|Duplicated School|
+|  3|Masters|                 CSE|             KiiT|
+|  4|    PHD|                 ETC|             KiiT|
++---+-------+--------------------+-----------------+
+
+>>> graduateProgram3.join(person1,joinexpression,joinType).show()
++---+-------+--------------------+-----------------+
+| id| degree|          department|           school|
++---+-------+--------------------+-----------------+
+|  0|Masters|School of Informa...|      UC Berkeley|
+|  1|  Ph.D.|                EECS|      UC Berkeley|
+|  0|Masters|       DuplicatedRow|Duplicated School|
+|  3|Masters|                 CSE|             KiiT|
++---+-------+--------------------+-----------------+
+
+
+>>> graduateProgram3.createOrReplaceTempView('graduateProgram3')
+>>> person1.createOrReplaceTempView('person1')
+
+>>> spark.sql('''select * from graduateProgram3 left semi join person1 on graduateProgram3.id =person1.graduate_program''').show()
++---+-------+--------------------+-----------------+
+| id| degree|          department|           school|
++---+-------+--------------------+-----------------+
+|  0|Masters|School of Informa...|      UC Berkeley|
+|  1|  Ph.D.|                EECS|      UC Berkeley|
+|  0|Masters|       DuplicatedRow|Duplicated School|
+|  3|Masters|                 CSE|             KiiT|
++---+-------+--------------------+-----------------+
+
+>>> 
+
+LEFT ANTI JOINS:
+It is opposite to left-semi join. Here it check	checks for the join key in right dataframe and only includes those which are
+not matching or not existing in right dataframe.
+So basically a not in operater in sql.
+Left semi join was in operator.
+
+
+>>> joinexpression
+Column<'(graduate_program = id)'>
+>>> joinType
+'left_anti'
+
+
+
+>>> graduateProgram3.show()
++---+-------+--------------------+-----------------+
+| id| degree|          department|           school|
++---+-------+--------------------+-----------------+
+|  0|Masters|School of Informa...|      UC Berkeley|
+|  2|Masters|                EECS|      UC Berkeley|
+|  1|  Ph.D.|                EECS|      UC Berkeley|
+|  0|Masters|       DuplicatedRow|Duplicated School|
+|  3|Masters|                 CSE|             KiiT|
+|  4|    PHD|                 ETC|             KiiT|
++---+-------+--------------------+-----------------+
+
+>>> person1.show()
++---+----------------+----------------+---------------+
+| id|            name|graduate_program|   spark_status|
++---+----------------+----------------+---------------+
+|  0|   Bill Chambers|               0|          [100]|
+|  1|   Matei Zaharia|               1|[500, 250, 100]|
+|  2|Michael Armbrust|               1|     [250, 100]|
+|  4|        Anshuman|               3|     [200, 800]|
++---+----------------+----------------+---------------+
+
+>>> graduateProgram3.join(person1,joinexpression,joinType).show()
++---+-------+----------+-----------+
+| id| degree|department|     school|
++---+-------+----------+-----------+
+|  2|Masters|      EECS|UC Berkeley|
+|  4|    PHD|       ETC|       KiiT|
++---+-------+----------+-----------+
+
+>>> spark.sql('''select * from graduateProgram3 left anti join person1 on graduateProgram3.id=person1.graduate_program''').show()
++---+-------+----------+-----------+
+| id| degree|department|     school|
++---+-------+----------+-----------+
+|  2|Masters|      EECS|UC Berkeley|
+|  4|    PHD|       ETC|       KiiT|
++---+-------+----------+-----------+
+
+CROSS JOIN:
+
+
+>>> joinType="cross"
+>>> graduateProgram3.join(person1,joinexpression,joinType).show()
++---+-------+--------------------+-----------------+---+----------------+----------------+---------------+
+| id| degree|          department|           school| id|            name|graduate_program|   spark_status|
++---+-------+--------------------+-----------------+---+----------------+----------------+---------------+
+|  0|Masters|School of Informa...|      UC Berkeley|  0|   Bill Chambers|               0|          [100]|
+|  0|Masters|       DuplicatedRow|Duplicated School|  0|   Bill Chambers|               0|          [100]|
+|  3|Masters|                 CSE|             KiiT|  4|        Anshuman|               3|     [200, 800]|
+|  1|  Ph.D.|                EECS|      UC Berkeley|  1|   Matei Zaharia|               1|[500, 250, 100]|
+|  1|  Ph.D.|                EECS|      UC Berkeley|  2|Michael Armbrust|               1|     [250, 100]|
++---+-------+--------------------+-----------------+---+----------------+----------------+---------------+
+
+
+>>> person1.crossJoin(graduateProgram3).show()
++---+----------------+----------------+---------------+---+-------+--------------------+-----------------+
+| id|            name|graduate_program|   spark_status| id| degree|          department|           school|
++---+----------------+----------------+---------------+---+-------+--------------------+-----------------+
+|  0|   Bill Chambers|               0|          [100]|  0|Masters|School of Informa...|      UC Berkeley|
+|  0|   Bill Chambers|               0|          [100]|  2|Masters|                EECS|      UC Berkeley|
+|  0|   Bill Chambers|               0|          [100]|  1|  Ph.D.|                EECS|      UC Berkeley|
+|  0|   Bill Chambers|               0|          [100]|  0|Masters|       DuplicatedRow|Duplicated School|
+|  0|   Bill Chambers|               0|          [100]|  3|Masters|                 CSE|             KiiT|
+|  0|   Bill Chambers|               0|          [100]|  4|    PHD|                 ETC|             KiiT|
+|  1|   Matei Zaharia|               1|[500, 250, 100]|  0|Masters|School of Informa...|      UC Berkeley|
+|  1|   Matei Zaharia|               1|[500, 250, 100]|  2|Masters|                EECS|      UC Berkeley|
+|  1|   Matei Zaharia|               1|[500, 250, 100]|  1|  Ph.D.|                EECS|      UC Berkeley|
+|  1|   Matei Zaharia|               1|[500, 250, 100]|  0|Masters|       DuplicatedRow|Duplicated School|
+|  1|   Matei Zaharia|               1|[500, 250, 100]|  3|Masters|                 CSE|             KiiT|
+|  1|   Matei Zaharia|               1|[500, 250, 100]|  4|    PHD|                 ETC|             KiiT|
+|  2|Michael Armbrust|               1|     [250, 100]|  0|Masters|School of Informa...|      UC Berkeley|
+|  2|Michael Armbrust|               1|     [250, 100]|  2|Masters|                EECS|      UC Berkeley|
+|  2|Michael Armbrust|               1|     [250, 100]|  1|  Ph.D.|                EECS|      UC Berkeley|
+|  2|Michael Armbrust|               1|     [250, 100]|  0|Masters|       DuplicatedRow|Duplicated School|
+|  2|Michael Armbrust|               1|     [250, 100]|  3|Masters|                 CSE|             KiiT|
+|  2|Michael Armbrust|               1|     [250, 100]|  4|    PHD|                 ETC|             KiiT|
+|  4|        Anshuman|               3|     [200, 800]|  0|Masters|School of Informa...|      UC Berkeley|
+|  4|        Anshuman|               3|     [200, 800]|  2|Masters|                EECS|      UC Berkeley|
++---+----------------+----------------+---------------+---+-------+--------------------+-----------------+
+only showing top 20 rows
+
+spark.sql.crossJoin.enable
+
+Join on complex types:
+
+>>> person.show()
++---+----------------+----------------+---------------+
+| id|            name|graduate_program|   spark_status|
++---+----------------+----------------+---------------+
+|  0|   Bill Chambers|               0|          [100]|
+|  1|   Matei Zaharia|               1|[500, 250, 100]|
+|  2|Michael Armbrust|               1|     [250, 100]|
++---+----------------+----------------+---------------+
+
+>>> sparkStatus.show()
++---+--------------+
+| id|        status|
++---+--------------+
+|500|Vice President|
+|250|    PMC Member|
+|100|   Contributor|
++---+--------------+
+
+>>> person.withColumnRenamed("id","personID").join(sparkStatus,expr("array_contains(spark_status,id)")).show()
++--------+----------------+----------------+---------------+---+--------------+
+|personID|            name|graduate_program|   spark_status| id|        status|
++--------+----------------+----------------+---------------+---+--------------+
+|       0|   Bill Chambers|               0|          [100]|100|   Contributor|
+|       1|   Matei Zaharia|               1|[500, 250, 100]|500|Vice President|
+|       1|   Matei Zaharia|               1|[500, 250, 100]|250|    PMC Member|
+|       1|   Matei Zaharia|               1|[500, 250, 100]|100|   Contributor|
+|       2|Michael Armbrust|               1|     [250, 100]|250|    PMC Member|
+|       2|Michael Armbrust|               1|     [250, 100]|100|   Contributor|
++--------+----------------+----------------+---------------+---+--------------+
+
+
+>>> 
+>>> person.withColumnRenamed("id","personID")
+DataFrame[personID: bigint, name: string, graduate_program: bigint, spark_status: array<bigint>]
+>>> 
+
+
+>>> person.withColumnRenamed("id","personID").show()
++--------+----------------+----------------+---------------+
+|personID|            name|graduate_program|   spark_status|
++--------+----------------+----------------+---------------+
+|       0|   Bill Chambers|               0|          [100]|
+|       1|   Matei Zaharia|               1|[500, 250, 100]|
+|       2|Michael Armbrust|               1|     [250, 100]|
++--------+----------------+----------------+---------------+
+
+
+
+>>> df10=spark.createDataFrame([(1,[100,200],"KiiT","BBSR"),(2,[1,100,3],"ITER","CTC"),(3,[400,1],"NIT","BLS")]).toDF("stuID","Marks","cllg","city")
+>>> df11=spark.createDataFrame([(1,"Anshuman","xyz"),(2,"Abhi","abc"),(3,"vivek","pqr")]).toDF("stuID","name","Hobby")
+>>> df10.show()
++-----+-----------+----+----+
+|stuID|      Marks|cllg|city|
++-----+-----------+----+----+
+|    1| [100, 200]|KiiT|BBSR|
+|    2|[1, 100, 3]|ITER| CTC|
+|    3|   [400, 1]| NIT| BLS|
++-----+-----------+----+----+
+
+>>> df11.show()
++-----+--------+-----+
+|stuID|    name|Hobby|
++-----+--------+-----+
+|    1|Anshuman|  xyz|
+|    2|    Abhi|  abc|
+|    3|   vivek|  pqr|
++-----+--------+-----+
+
+>>> df10.withColumnRenamed("stuID","student_ID").join(df11,expr("array_contains(Marks,stuID)")).show()
++----------+-----------+----+----+-----+--------+-----+
+|student_ID|      Marks|cllg|city|stuID|    name|Hobby|
++----------+-----------+----+----+-----+--------+-----+
+|         2|[1, 100, 3]|ITER| CTC|    1|Anshuman|  xyz|
+|         2|[1, 100, 3]|ITER| CTC|    3|   vivek|  pqr|
+|         3|   [400, 1]| NIT| BLS|    1|Anshuman|  xyz|
++----------+-----------+----+----+-----+--------+-----+
+
+Here df11.stuID is compared with df10.Marks and if we can see only stuID 1 and 3 are present which occur in output.
+
+
+Sparksql format of executing complex type query. Total query is broken down for understanding:
+
+>>> spark.sql(''' select * from (select stuID as Student_Id ,Marks,cllg,city from df10) ''').show()
++----------+-----------+----+----+
+|Student_Id|      Marks|cllg|city|
++----------+-----------+----+----+
+|         1| [100, 200]|KiiT|BBSR|
+|         2|[1, 100, 3]|ITER| CTC|
+|         3|   [400, 1]| NIT| BLS|
++----------+-----------+----+----+
+
+--So above tabular form DF is first created as stuID is present in df11 and df10. So at first we remove ambiguity
+by renaming to Student_ID and we get above dataframe.
+Now below df11 has stuID column which will be join with marks column of df10.
+if we had not done select* from subquery then both df would have stuID as ambiguous.
+
+>>> df11.show()
++-----+--------+-----+
+|stuID|    name|Hobby|
++-----+--------+-----+
+|    1|Anshuman|  xyz|
+|    2|    Abhi|  abc|
+|    3|   vivek|  pqr|
++-----+--------+-----+
+
+>>> spark.sql(''' select * from (select stuID as Student_Id ,Marks,cllg,city from df10) inner join df11 on array_contains(Marks,stuID)''').show()
++----------+-----------+----+----+-----+--------+-----+
+|Student_Id|      Marks|cllg|city|stuID|    name|Hobby|
++----------+-----------+----+----+-----+--------+-----+
+|         2|[1, 100, 3]|ITER| CTC|    1|Anshuman|  xyz|
+|         2|[1, 100, 3]|ITER| CTC|    3|   vivek|  pqr|
+|         3|   [400, 1]| NIT| BLS|    1|Anshuman|  xyz|
++----------+-----------+----+----+-----+--------+-----+
+
+Handling Duplicate Column Names
+
+All columns in a dataframe has a unique ID in spark sql engine catalyst. When we have duplicates column names
+in our resulting dataframe it is difficult to refer specific column.
+
+Two distinct scenarious:
+
+1. The join exp that we specify if it omits one of the keys that have similar name from the input dataframes
+then it wont be an issue but rather the join expression doesn't remove the key from input df and the keys have same
+name.
+
+2.two keys on which we are not performing join have same column names.
+
+
+1st issue:
+
+>>> df10
+DataFrame[stuID: bigint, Marks: array<bigint>, cllg: string, city: string]
+>>> df11
+DataFrame[stuID: bigint, name: string, Hobby: string]
+
+
+>>> joinexpr=df10["stuID"]==df11["stuID"]
+
+>>> df10.join(df11,joinexpr).show()
++-----+-----------+----+----+-----+--------+-----+
+|stuID|      Marks|cllg|city|stuID|    name|Hobby|
++-----+-----------+----+----+-----+--------+-----+
+|    3|   [400, 1]| NIT| BLS|    3|   vivek|  pqr|
+|    2|[1, 100, 3]|ITER| CTC|    2|    Abhi|  abc|
+|    1| [100, 200]|KiiT|BBSR|    1|Anshuman|  xyz|
++-----+-----------+----+----+-----+--------+-----+
+
+>>> df10.join(df11,joinexpr).select("stuID").show()
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/Users/dibyajyoti/Downloads/spark-3.1.2-bin-hadoop3.2/python/pyspark/sql/dataframe.py", line 1669, in select
+    jdf = self._jdf.select(self._jcols(*cols))
+  File "/Users/dibyajyoti/Downloads/spark-3.1.2-bin-hadoop3.2/python/lib/py4j-0.10.9-src.zip/py4j/java_gateway.py", line 1305, in __call__
+  File "/Users/dibyajyoti/Downloads/spark-3.1.2-bin-hadoop3.2/python/pyspark/sql/utils.py", line 117, in deco
+    raise converted from None
+pyspark.sql.utils.AnalysisException: Reference 'stuID' is ambiguous, could be: stuID, stuID.
+>>> 
+
+
+Reason is below: the join  creates a DF with duplicate stuID column of df10 and df11. Now you are trying
+to select stuID, spark doesn't know which stuID to select:
+
+>>> df10.join(df11,joinexpr).show()
++-----+-----------+----+----+-----+--------+-----+
+|stuID|      Marks|cllg|city|stuID|    name|Hobby|
++-----+-----------+----+----+-----+--------+-----+
+|    3|   [400, 1]| NIT| BLS|    3|   vivek|  pqr|
+|    2|[1, 100, 3]|ITER| CTC|    2|    Abhi|  abc|
+|    1| [100, 200]|KiiT|BBSR|    1|Anshuman|  xyz|
++-----+-----------+----+----+-----+--------+-----+
+
+>>> 
+
+
+
+>>> df10.show()
++-----+-----------+----+----+
+|stuID|      Marks|cllg|city|
++-----+-----------+----+----+
+|    1| [100, 200]|KiiT|BBSR|
+|    2|[1, 100, 3]|ITER| CTC|
+|    3|   [400, 1]| NIT| BLS|
++-----+-----------+----+----+
+
+>>> df11.show()
++-----+--------+-----+
+|stuID|    name|Hobby|
++-----+--------+-----+
+|    1|Anshuman|  xyz|
+|    2|    Abhi|  abc|
+|    3|   vivek|  pqr|
++-----+--------+-----+
+
+1st solution: replace the joinexpress with a string or sequence from an boolean value of joinexpr [==]
+(Approach 1: Different join expression)
+
+>>> df10.join(df11,"stuID").select("stuID").show()
++-----+
+|stuID|
++-----+
+|    3|
+|    2|
+|    1|
++-----+
+
+>>> df10.join(df11,"stuID").select("stuID","Marks").show()
++-----+-----------+
+|stuID|      Marks|
++-----+-----------+
+|    3|   [400, 1]|
+|    2|[1, 100, 3]|
+|    1| [100, 200]|
++-----+-----------+
+Approach 2: Dropping the column after the join
+
+We can drop the column from the resulting dataframe by referring it with source dataframe and col keyword.
+Here we are explicitely telling spark sql analysis to pass the referenced column as spark doesn't need to resolve this
+using its catalyst and unique ID.
+
+>>> df10.join(df11,joinexpr).drop(df10["stuID"]).select("stuID").show()
++-----+
+|stuID|
++-----+
+|    3|
+|    2|
+|    1|
++-----+
+
+>>> df10.join(df11,joinexpr).drop(df10["stuID"]).select("*").show()
++-----------+----+----+-----+--------+-----+
+|      Marks|cllg|city|stuID|    name|Hobby|
++-----------+----+----+-----+--------+-----+
+|   [400, 1]| NIT| BLS|    3|   vivek|  pqr|
+|[1, 100, 3]|ITER| CTC|    2|    Abhi|  abc|
+| [100, 200]|KiiT|BBSR|    1|Anshuman|  xyz|
++-----------+----+----+-----+--------+-----+
+
+>>> df10.join(df11,joinexpr).drop(df11["stuID"]).select("*").show()
++-----+-----------+----+----+--------+-----+
+|stuID|      Marks|cllg|city|    name|Hobby|
++-----+-----------+----+----+--------+-----+
+|    3|   [400, 1]| NIT| BLS|   vivek|  pqr|
+|    2|[1, 100, 3]|ITER| CTC|    Abhi|  abc|
+|    1| [100, 200]|KiiT|BBSR|Anshuman|  xyz|
++-----+-----------+----+----+--------+-----+
+
+>>> 
+
+Approach 3: Renaming a column before the join
+
+>>> dfRename=df10.withColumnRenamed("stuID","ID")
+>>> dfRename.show()
++---+-----------+----+----+
+| ID|      Marks|cllg|city|
++---+-----------+----+----+
+|  1| [100, 200]|KiiT|BBSR|
+|  2|[1, 100, 3]|ITER| CTC|
+|  3|   [400, 1]| NIT| BLS|
++---+-----------+----+----+
+
+>>> joinExpr=dfRename["ID"]==df11["stuID"]
+>>> dfRename.join(df11,joinExpr).show()
++---+-----------+----+----+-----+--------+-----+
+| ID|      Marks|cllg|city|stuID|    name|Hobby|
++---+-----------+----+----+-----+--------+-----+
+|  3|   [400, 1]| NIT| BLS|    3|   vivek|  pqr|
+|  2|[1, 100, 3]|ITER| CTC|    2|    Abhi|  abc|
+|  1| [100, 200]|KiiT|BBSR|    1|Anshuman|  xyz|
++---+-----------+----+----+-----+--------+-----+
+
+
+Communication Strategies:
+-------------------------
+
+Spark approach cluster communication in two different ways during joins. It either incurs 
+a shuffle join which results in all-to-all communication or broadcast join .
+Basically internally uses lot of optimizations which can be improvement in cost based optimizer or
+improved communication strategies with the cluster.
+The core fundamental simplified view of joins in spark is that either you will have a bigtable or small table.
+However in case of a medium sized table things are different.
+
+1. Big table–to–big table (shuffle join):
+
+In case of two bigtables where the data not well partioned it will lead to shuffle join.
+Let's say we have a big table when records for a column is not well partitioned so if we have 4 partitions
+for the table then records will be present in all 4 partitions unevenly.
+Now when we are joining two big tables for the same key, it will basically lead to each executer to executor,
+partition to partition communication as key is present in all executor's computing partition.
+So in the entire join process all worker nodes(potentially every partition) are communicating.
+This can lead to network congestion and traffic and an expensive operation.
+
+2. Big table–to–small table
+
+In Bigtable to small table we use the most efficient strategies called broadcast join.
+In broadcast join we replicate the small table dataframe to every worker nodes containing bigtable partitons.
+This is an expensive opeation at first but however this is only the first time and one time approach that we follow.
+Once the dataframe is replicated the executor can perform computation local to its node . Although it can cause CPU bottleneck but still
+better then all to all communication .
+
+We can also specify the hint to sql interface or optimizer by using broadcast function on our column.
+Sql optmizer can override it and apply its own logic.
+However we should be careful to only broadcast small table else it can crash our driver node.
+
+>>> from pyspark.sql.functions import broadcast
+>>> df10.join(broadcast(df11),joinexpr).drop(df10["stuID"]).select("*").show()
++-----------+----+----+-----+--------+-----+
+|      Marks|cllg|city|stuID|    name|Hobby|
++-----------+----+----+-----+--------+-----+
+| [100, 200]|KiiT|BBSR|    1|Anshuman|  xyz|
+|[1, 100, 3]|ITER| CTC|    2|    Abhi|  abc|
+|   [400, 1]| NIT| BLS|    3|   vivek|  pqr|
++-----------+----+----+-----+--------+-----+
+
+>>> df10.join(broadcast(df11),joinexpr).drop(df10["stuID"]).select("*").explain()
+== Physical Plan ==
+*(2) Project [Marks#3644, cllg#3645, city#3646, stuID#3657L, name#3658, Hobby#3659]
++- *(2) BroadcastHashJoin [stuID#3643L], [stuID#3657L], Inner, BuildRight, false
+   :- *(2) Project [_1#3635L AS stuID#3643L, _2#3636 AS Marks#3644, _3#3637 AS cllg#3645, _4#3638 AS city#3646]
+   :  +- *(2) Filter isnotnull(_1#3635L)
+   :     +- *(2) Scan ExistingRDD[_1#3635L,_2#3636,_3#3637,_4#3638]
+   +- BroadcastExchange HashedRelationBroadcastMode(List(input[0, bigint, true]),false), [id=#7032]
+      +- *(1) Project [_1#3651L AS stuID#3657L, _2#3652 AS name#3658, _3#3653 AS Hobby#3659]
+         +- *(1) Filter isnotnull(_1#3651L)
+            +- *(1) Scan ExistingRDD[_1#3651L,_2#3652,_3#3653]
+
+
+Without broadcast it is using SortMerge join
+>>> df10.join(df11,joinexpr).drop(df10["stuID"]).select("*").explain()
+== Physical Plan ==
+*(5) Project [Marks#3644, cllg#3645, city#3646, stuID#3657L, name#3658, Hobby#3659]
++- *(5) SortMergeJoin [stuID#3643L], [stuID#3657L], Inner
+   :- *(2) Sort [stuID#3643L ASC NULLS FIRST], false, 0
+   :  +- Exchange hashpartitioning(stuID#3643L, 5), ENSURE_REQUIREMENTS, [id=#7076]
+   :     +- *(1) Project [_1#3635L AS stuID#3643L, _2#3636 AS Marks#3644, _3#3637 AS cllg#3645, _4#3638 AS city#3646]
+   :        +- *(1) Filter isnotnull(_1#3635L)
+   :           +- *(1) Scan ExistingRDD[_1#3635L,_2#3636,_3#3637,_4#3638]
+   +- *(4) Sort [stuID#3657L ASC NULLS FIRST], false, 0
+      +- Exchange hashpartitioning(stuID#3657L, 5), ENSURE_REQUIREMENTS, [id=#7082]
+         +- *(3) Project [_1#3651L AS stuID#3657L, _2#3652 AS name#3658, _3#3653 AS Hobby#3659]
+            +- *(3) Filter isnotnull(_1#3651L)
+               +- *(3) Scan ExistingRDD[_1#3651L,_2#3652,_3#3653]
+
+
+>>> 
+
+3. Little table–to–little table
+Let spark decide and optimize the strategies. if we see strange behavior we can always apply broadcast.
+
+Join optimization:
+
+important to consider is if you partition your data correctly prior to a join,
+you can end up with much more efficient execution because even if a shuffle is planned, if data
+from two different DataFrames is already located on the same machine, Spark can avoid the
+shuffle. Experiment with some of your data and try partitioning beforehand to see if you can
+notice the increase in speed when performing those joins
+
+basically we can related this to map reduce paradigm, lets say we are partioning on a column.
+Now the hash partition is applied to the each record and each record with same hash value will go to same partition.
+at the end , we will have dedicated partition for each values . Now on applying join to that column as a key,
+we are restricted to communicated between those worker nodes/machines holding those set of partitions.
+
+
+---CHAPTER9 : Data Sources ----
+
+
