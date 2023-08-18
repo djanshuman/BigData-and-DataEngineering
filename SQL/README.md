@@ -1,6 +1,7 @@
 1. Select top N salaries from EMP table
 
 -- second highest 
+
 select * from
 (select e.*,
     dense_rank() over (order by sal desc) rnk from emp e )
@@ -8,12 +9,14 @@ where rnk =2;
 --7701	John	WORKER	5000	2
 
 -- Second highest 
+
 select * from emp where sal = (
 select max(sal) from emp where sal not in (select max(sal) from emp ));
 --7701	John	WORKER	5000
 
 
 -- nth highest, just replace  n with a value = or < 
+
 select * from
 (select e.*,
     dense_rank() over (order by sal desc) rnk from emp e )
