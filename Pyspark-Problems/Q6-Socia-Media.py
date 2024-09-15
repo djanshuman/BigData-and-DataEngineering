@@ -1,4 +1,4 @@
-/*
+'''
 Correcting Social Media Posts
 
 
@@ -71,7 +71,7 @@ Output
 | 8        | 2022-03-10 | 10 | 100   | Twitter   | 7      | PySpark for data engineering.                 |
 | 9        | 2022-03-05 | 5  | 50    | Instagram | 6      | PySpark vs. R for data science.               |
 +----------+------------+----+-------+-----------+--------+-----------------------------------------------+
-*/
+'''
 
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
