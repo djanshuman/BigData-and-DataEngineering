@@ -111,16 +111,17 @@ import json
 spark = SparkSession.builder.appName('run-pyspark-code').getOrCreate()
 
 def etl(products, sales):
-	# Write code here
-  combinedDF= products.join(sales,on="product_id",how="inner")
+    # Write code here
+    combinedDF= products.join(sales,on="product_id",how="inner")
+    window_spec= W.partitionBy("category").orderBy(F.desc("revenue"))
 
-  window_spec= W.partitionBy("category").orderBy(F.desc("revenue"))
-
-
-  resultDF= combinedDF.select(
-            "category",
-            "product_name",
-            "revenue",
-            F.dense_rank().over(window_spec).alias("rank")
+    final_DF= combinedDF.select(
+                "category",
+                "product_name",
+                "revenue",
+                F.dense_rank().over(window_spec).alias("rank")
+    )
+    resultDF = final_DF.filter(F.col("rank") <=3 )
+    return resultDF
   )
   return resultDF
