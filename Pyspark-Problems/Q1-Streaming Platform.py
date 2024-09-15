@@ -1,5 +1,4 @@
-
-/*
+'''
 
 Streaming Platform
 
@@ -46,7 +45,7 @@ Output
 | 128      | Sci-fi | 2021         | Journey to the Stars | 5        | 1100000    |
 | 134      | Action | 2019         | Uncharted Realms     | 4        | 3200000    |
 +----------+--------+--------------+----------------------+----------+------------+
-*/
+'''
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql import Window as W
