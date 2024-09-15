@@ -1,4 +1,4 @@
-/*
+'''
 Property Management Company
 
  
@@ -88,7 +88,7 @@ Expected
 | 102         | Jane Doe      | 2000.0              |
 | 103         | Bob Johnson   | 2800.0              |
 +-------------+---------------+---------------------+
-*/
+'''
                                                                                                                                                                                                                                                                                                                                                      
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
