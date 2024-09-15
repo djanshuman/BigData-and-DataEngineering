@@ -1,4 +1,4 @@
-/*
+'''
 E-Commerce Platform
 
 
@@ -77,7 +77,7 @@ Output
 | 62.500000 | Footwear | 2                  |
 +-----------+----------+--------------------+
 
-*/
+'''
 
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
