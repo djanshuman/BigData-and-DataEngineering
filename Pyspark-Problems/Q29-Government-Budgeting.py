@@ -107,3 +107,8 @@ def etl(budget_df, spending_df):
 
 
     
+'''
+# you can drop duplicates at final dataframe without dropping in separate df's.
+    agg_dedup_df = budget_df_var.join(spending_df_var,"Department","inner")\
+                        .dropDuplicates()
+'''
