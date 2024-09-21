@@ -61,3 +61,23 @@ manager_salary as (
 		on manager_salary.manager_employee_id =emp_salary.employee_id
 		where manager_salary.salary > emp_salary.salary;
 
+
+-- using self join option
+
+with cte as (
+select
+	a.employee_id as emp_id,
+	a.salary as emp_sal,
+	b.manager_employee_id as mgr_emp_id,
+	c.salary as mgr_sal
+	from employee a
+	inner join
+	MAP_EMPLOYEE_HIERARCHY b
+	on a.employee_id = b.employee_id
+	inner join
+	employee c
+	on b.manager_employee_id = c.employee_id)
+	select 
+	emp_id
+	from cte where emp_sal > mgr_sal;
+
