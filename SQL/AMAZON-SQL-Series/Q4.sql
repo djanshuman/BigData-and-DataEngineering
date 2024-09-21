@@ -36,9 +36,12 @@ select
 	STATE
 	from CUST_DIM
 	where extract(year from current_date) - extract( year from BIRTH_DATE) > 40
-	and ITEM_SPEND_AMT >= 1000)
+	and ITEM_SPEND_AMT >= 1000
+	and lower(COUNTRY)= 'us')
 	select 
 	STATE,
 	count(distinct CUST_ID)
 	from cte
 	group by STATE;
+
+
