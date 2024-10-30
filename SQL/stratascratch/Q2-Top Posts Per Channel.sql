@@ -5,19 +5,21 @@ https://platform.stratascratch.com/coding/10538-top-posts-per-channel?code_type=
 
 with cte as 
 (select
-channel_name,
-post_id,
-created_at,
-likes,
-dense_rank() over(partition by channel_name order by likes desc) as rnk
-from posts inner join channels
-on posts.channel_id = channels.channel_id
-where likes != 0
-)select channel_name,
-post_id,
-created_at,
-likes
-from cte where rnk <=3;
+    channel_name,
+    post_id,
+    created_at,
+    likes,
+    dense_rank() over(partition by channel_name order by likes desc) as rnk
+    from posts inner join channels
+    on posts.channel_id = channels.channel_id
+    where likes != 0
+)
+select channel_name,
+    post_id,
+    created_at,
+    likes
+    from cte where rnk <=3;
+
 
 '''
 channel_name	post_id	created_at	likes
