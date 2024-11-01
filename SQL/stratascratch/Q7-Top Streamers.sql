@@ -12,5 +12,5 @@ select
             when (session_type= 'viewer') then 1
             else null end) as view
     from twitch_sessions
-group by user_id )
-select * from cte where streaming > view;
+    group by user_id )
+    select * from cte where streaming > view;
