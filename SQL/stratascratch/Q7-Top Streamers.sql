@@ -1,7 +1,6 @@
 '''
 https://platform.stratascratch.com/coding/2010-top-streamers?code_type=1
 '''
-
 with cte 
     as (
         select * from 
