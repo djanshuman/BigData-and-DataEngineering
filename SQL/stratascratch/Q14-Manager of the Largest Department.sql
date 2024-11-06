@@ -1,11 +1,11 @@
 '''
-  https://platform.stratascratch.com/coding/2060-manager-of-the-largest-department?code_type=1
+https://platform.stratascratch.com/coding/2060-manager-of-the-largest-department?code_type=1
 
-  Manager of the Largest Department
+Manager of the Largest Department
 
-Given a list of a company's employees, find the name of the manager from the largest department. Manager is each employee that contains word "manager" under their position.  Output their first and last name.
+Given a list of a company''s employees, find the name of the manager from the largest department. Manager is each employee that contains word "manager" under their position.  Output their first and last name.
 
-  az_employees
+az_employees
 
 id	first_name	last_name	department_id	department_name	position
 9	Christy	Mitchell	1001	Marketing	Senior specialist
