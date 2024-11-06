@@ -60,9 +60,6 @@ id	name	timezone
   
 '''
 
-
-
-
 with cte as (
     select 
         pm.name as name,
@@ -82,4 +79,11 @@ with cte as (
         or 
               growth_difference = 
         (select min(growth_difference) from cte);
-    
+
+'''
+Your Solution:
+name	growth_difference
+Boston	-530.26
+Seattle	192.74
+
+'''
