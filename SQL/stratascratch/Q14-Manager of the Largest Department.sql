@@ -1,5 +1,6 @@
 '''
 https://platform.stratascratch.com/coding/2060-manager-of-the-largest-department?code_type=1
+https://platform.stratascratch.com/coding?is_freemium=0&companies=40&companies=56&difficulties=2&difficulties=3&code_type=1&page_size=100&order_field=difficulty     
 
 Manager of the Largest Department
 
