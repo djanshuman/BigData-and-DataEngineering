@@ -176,6 +176,21 @@ select client_id, count(user_id) from
         ) b
 group by client_id;
 
+-- Other solution
+
+select client_id,
+count(distinct user_id) 
+from fact_events 
+where user_id in (
+ select 
+    user_id
+    from fact_events
+    group by user_id
+    having count(distinct client_id) = 1
+ )
+group by client_id;
+    
+
 
 '''
 client_id	count
