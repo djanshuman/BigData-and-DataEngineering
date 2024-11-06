@@ -1,0 +1,141 @@
+'''
+  https://platform.stratascratch.com/coding/10314-revenue-over-time?code_type=1
+
+Find the 3-month rolling average of total revenue from purchases given a table with users, their purchase amount, and date purchased. 
+Do not include returns which are represented by negative purchase values. Output the year-month (YYYY-MM) and 3-month rolling average of revenue, sorted from earliest month to latest month.
+
+A 3-month rolling average is defined by calculating the average total revenue from all user purchases for the current month and previous two months. 
+The first two months will not be a true 3-month rolling average since we are not given data from last year. Assume each month has at least one purchase.
+
+amazon_purchases: 
+user_id	created_at	purchase_amt
+10	2020-01-01	3742
+11	2020-01-04	1290
+12	2020-01-07	4249
+13	2020-01-10	4899
+14	2020-01-13	-4656
+15	2020-01-16	-655
+16	2020-01-19	4659
+17	2020-01-22	3813
+18	2020-01-25	-2623
+19	2020-01-28	3640
+20	2020-01-31	-1028
+21	2020-02-03	2715
+22	2020-02-06	1592
+23	2020-02-09	1516
+24	2020-02-12	2700
+25	2020-02-15	1543
+26	2020-02-18	4210
+27	2020-02-21	-608
+28	2020-02-24	2855
+29	2020-02-27	3564
+30	2020-03-01	3037
+31	2020-03-04	2552
+32	2020-03-07	2487
+33	2020-03-10	-1933
+34	2020-03-13	4973
+35	2020-03-16	4475
+36	2020-03-19	-913
+37	2020-03-22	2265
+38	2020-03-25	3525
+39	2020-03-28	3251
+40	2020-03-31	3055
+41	2020-04-03	4828
+42	2020-04-06	-3230
+43	2020-04-09	4772
+44	2020-04-12	-775
+45	2020-04-15	2051
+46	2020-04-18	1974
+47	2020-04-21	2311
+48	2020-04-24	-593
+49	2020-04-27	2583
+50	2020-04-30	3414
+51	2020-05-03	4216
+52	2020-05-06	2420
+53	2020-05-09	3138
+54	2020-05-12	1036
+55	2020-05-15	2543
+56	2020-05-18	2127
+57	2020-05-21	1026
+58	2020-05-24	1650
+59	2020-05-27	3514
+60	2020-05-30	3030
+61	2020-06-02	4014
+62	2020-06-05	4390
+63	2020-06-08	4459
+64	2020-06-11	-2850
+65	2020-06-14	4369
+66	2020-06-17	1895
+67	2020-06-20	2184
+68	2020-06-23	-765
+69	2020-06-26	2001
+70	2020-06-29	4375
+71	2020-07-02	4104
+72	2020-07-05	4223
+73	2020-07-08	633
+74	2020-07-11	3352
+75	2020-07-14	4421
+76	2020-07-17	-4284
+77	2020-07-20	1904
+78	2020-07-23	4928
+79	2020-07-26	-1680
+80	2020-07-29	1744
+81	2020-08-01	3797
+82	2020-08-04	4053
+83	2020-08-07	-1829
+84	2020-08-10	2196
+85	2020-08-13	1792
+86	2020-08-16	4050
+87	2020-08-19	1468
+88	2020-08-22	2191
+89	2020-08-25	-594
+90	2020-08-28	2318
+91	2020-08-31	1631
+92	2020-09-03	3804
+93	2020-09-06	-2032
+94	2020-09-09	3599
+95	2020-09-12	3043
+96	2020-09-15	1999
+97	2020-09-18	-1334
+98	2020-09-21	4344
+99	2020-09-24	-3960
+100	2020-09-27	4316
+101	2020-09-30	3722
+102	2020-10-03	1433
+103	2020-10-06	-1045
+104	2020-10-09	3035
+105	2020-10-12	4865
+106	2020-10-15	-3330
+107	2020-10-18	4228
+108	2020-10-21	-1834
+109	2020-10-24	1749
+  
+'''
+select a.month,
+        avg(a.total_purchase) over (
+                                    order by a.month rows between 2 preceding and current row) as avg_revenue
+from 
+(select
+    to_char(created_at::date,'YYYY-MM') as month,
+        sum(purchase_amt) as total_purchase
+    from amazon_purchases
+    where purchase_amt > 0
+    group by to_char(created_at::date,'YYYY-MM')
+    order by 1) a 
+order by a.month asc;
+
+'''
+Your Solution:
+month	avg_revenue
+2020-01	26292
+2020-02	23493.5
+2020-03	25535.67
+2020-04	24082.67
+2020-05	25417.67
+2020-06	24773.33
+2020-07	25898.67
+2020-08	25497.33
+2020-09	24544
+2020-10	21211
+  
+'''
