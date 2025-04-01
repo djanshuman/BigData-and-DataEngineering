@@ -1,7 +1,7 @@
 '''
 https://platform.stratascratch.com/coding/10141-apple-product-counts?code_type=1
 
-We're exploring user data for a platform to see how popular Apple devices are among our users. We want to understand this popularity in the context of different languages. 
+We are exploring user data for a platform to see how popular Apple devices are among our users. We want to understand this popularity in the context of different languages. 
 Analyze the data and show us the number of people using Apple devices compared to the total number of users, broken down by language.
 
 
