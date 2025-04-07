@@ -9,7 +9,7 @@ spark = SparkSession.builder.appName('run-pyspark-code').getOrCreate()
 def etl(mountain_info, mountain_climbers):
 	# Write code here
     
-	joinedDF= mountain_info.join(mountain_climbers,
+    joinedDF= mountain_info.join(mountain_climbers,
                             mountain_info.name == mountain_climbers.mountain_name,"inner")
     
     
