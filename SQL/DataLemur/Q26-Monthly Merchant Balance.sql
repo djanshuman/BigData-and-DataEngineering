@@ -49,3 +49,23 @@ date_trunc	balance
 07/10/2022 00:00:00	504.46
 07/13/2022 00:00:00	404.46
 """
+
+#Approach 2
+
+with daily_balances as (
+SELECT
+  date_trunc('day',transaction_date) as "transaction_day",
+  date_trunc('month',transaction_date) as "transaction_month",
+  sum(
+    (case 
+    when type = 'deposit' then amount
+    when type = 'withdrawal' then -amount
+    end)) as "balance"
+  from 
+  transactions
+    group by 1,2)
+  SELECT
+    transaction_day,
+    sum(balance) over (partition by transaction_month order by transaction_day) as "balance"
+    from daily_balances;
+    
