@@ -75,6 +75,34 @@ SELECT
     on companies.personal_profile_id = profiles.profile_id
     where profiles.followers > companies.user_company_followers;
 
+-- solution 2--
+with all_data as(
+SELECT
+  pf.profile_id as "user_id",
+  pf.followers as "user_follower",
+  ec.company_id as "company",
+  cp.followers as "company_follower",
+  rank() over (partition by pf.profile_id order by cp.followers desc) as "rnk"
+  FROM personal_profiles pf left outer join employee_company ec 
+  on pf.profile_id = ec.personal_profile_id
+  left outer join company_pages cp 
+  on cp.company_id = ec.company_id
+  ),
+  
+  power_creators as (
+  SELECT
+    user_id,
+    case when user_follower	 > company_follower then 0
+    else 1 end as "filter"
+    from all_data
+    where rnk=1)
+    
+    select 
+      distinct user_id 
+      from power_creators
+      where filter = 0;
+
+
 """
 profile_id
 1
