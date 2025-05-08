@@ -89,7 +89,7 @@ select
 '''
 Accepted
 Runtime: 134 ms
-Case 1
+ 
 Case 2
 Input
 UserVisits =
