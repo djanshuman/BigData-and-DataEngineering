@@ -1,5 +1,4 @@
 
-
 1.For Comprehension for chaining Map and flatMap for concise code.
 
 for {
@@ -290,12 +289,15 @@ combinedMap: scala.collection.mutable.Map[Int,java.io.Serializable] = Map(5 -> (
 
 -- Use case 2 where values are iterables --
 
+#Step 1: Define own helper function 
 
 def combineIterables[K,V](a: Map[K,Iterable[V]] , b: Map[K,Iterable[V]]) : Map [K, Iterable[V]] = {
 	a ++ b.map{
 	case (k,v) => k -> (v ++ a.getOrElse(k,Iterable.empty))}
 }
 
+
+#Step 2 : Declare variable and call the function with collections variables
 
 scala> val firstMap = Map(1 -> List(1,2,3))
 firstMap: scala.collection.immutable.Map[Int,List[Int]] = Map(1 -> List(1, 2, 3))
@@ -313,3 +315,63 @@ combineIterables: [K, V](a: Map[K,Iterable[V]], b: Map[K,Iterable[V]])Map[K,Iter
 
 scala> val mergedMap = combineIterables[Int, Int](firstMap, secondMap)
 mergedMap: Map[Int,Iterable[Int]] = Map(1 -> List(4, 5, 1, 2, 3))
+
+
+def combinator[K,V](a : Map[K,Iterable[V]] , b: Map[K,Iterable[V]]) : Map[K,Iterable[V]] ={
+	a ++ b.map {
+	case(k,v) => k -> (v ++ a.getOrElse(k,Iterable.empty))
+	}
+}
+
+
+
+-- Alternate approach using for comprehension 
+
+val duplicateMap = for {
+(k1,v1) <- Map1
+(k2,v2) <- Map2
+if(k1 == k2)
+} yield Map1 ++ Map2.map {
+	case(k,v) => k -> (v ++ Map1.getOrElse(k,Iterable.empty))
+	}
+
+
+scala> val duplicateMap = for {
+     | (k1,v1) <- firstMap
+     | (k2,v2) <- secondMap
+     | if(k1 == k2)
+     | } yield firstMap ++ secondMap.map {
+     |   case(k,v) => k -> (v ++ firstMap.getOrElse(k,Iterable.empty))
+     |   }
+duplicateMap: scala.collection.immutable.Iterable[scala.collection.immutable.Map[Int,List[Int]]] = List(Map(1 -> List(4, 5, 1, 2, 3)))
+
+
+
+scala> val result = duplicateMap.head
+result: scala.collection.immutable.Map[Int,List[Int]] = Map(1 -> List(4, 5, 1, 2, 3))
+
+
+-- More example 
+
+scala> val Map1 = Map(400 -> List(90,60,20), 500 -> List(30,40,80))
+Map1: scala.collection.immutable.Map[Int,List[Int]] = Map(400 -> List(90, 60, 20), 500 -> List(30, 40, 80))
+
+scala> val Map2 = Map(400 -> List(11,22,33),55 -> List(333,444,555))
+Map2: scala.collection.immutable.Map[Int,List[Int]] = Map(400 -> List(11, 22, 33), 55 -> List(333, 444, 555))
+
+
+scala> val duplicateMap = for {
+     | (k1,v1) <- Map1
+     | (k2,v2) <- Map2
+     | if(k1 == k2)
+     | } yield Map1 ++ Map2.map {
+     |   case(k,v) => k -> (v ++ Map1.getOrElse(k,Iterable.empty))
+     |   }
+duplicateMap: scala.collection.immutable.Iterable[scala.collection.immutable.Map[Int,List[Int]]] = List(Map(400 -> List(11, 22, 33, 90, 60, 20), 500 -> List(30, 40, 80), 55 -> List(333, 444, 555)))
+
+scala> 
+
+scala> val result = duplicateMap.head
+result: scala.collection.immutable.Map[Int,List[Int]] = Map(400 -> List(11, 22, 33, 90, 60, 20), 500 -> List(30, 40, 80), 55 -> List(333, 444, 555))
+
+
