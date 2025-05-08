@@ -1,4 +1,6 @@
 
+
+
 1.For Comprehension for chaining Map and flatMap for concise code.
 
 for {
@@ -373,5 +375,165 @@ scala>
 
 scala> val result = duplicateMap.head
 result: scala.collection.immutable.Map[Int,List[Int]] = Map(400 -> List(11, 22, 33, 90, 60, 20), 500 -> List(30, 40, 80), 55 -> List(333, 444, 555))
+
+8. Find the Element With Max Value in a Map in Scala
+
+https://www.baeldung.com/scala/max-value-scala-map
+
+
+	8.1 Maps With Multiple Max Values
+
+
+		scala> val m = Map("a" -> 1, "b" -> 2, "c" -> 3, "d"->3)
+		m: scala.collection.immutable.Map[String,Int] = Map(a -> 1, b -> 2, c -> 3, d -> 3)
+		
+		Step 1: find the maxvalue from the map
+		
+		scala> val maxValue = m.maxBy(_._2)
+		maxValue: (String, Int) = (c,3)
+		
+		Step 2 : Apply Filter on original Map and retain only those pairs
+		
+		scala> m.filter(pair => pair._2 == maxValue._2)
+		res34: scala.collection.immutable.Map[String,Int] = Map(c -> 3, d -> 3)
+
+
+	8.2 Simple data type
+
+		scala> val m = Map("a" -> 1, "b" -> 2, "c" -> 3)
+		m: scala.collection.immutable.Map[String,Int] = Map(a -> 1, b -> 2, c -> 3)
+		
+		
+		scala> m.max
+		res1: (String, Int) = (c,3)
+		
+		scala> m.maxBy(_._2)
+		res4: (String, Int) = (c,3)
+
+
+
+
+
+
+9. Fold Left Map and List
+
+scala> List(1 -> "first", 2 -> "second").foldLeft(Map(3 -> "Hello" , 4 -> "Johny")){ case(x,(k,v)) => x + (k -> v) }
+res89: scala.collection.immutable.Map[Int,String] = Map(3 -> Hello, 4 -> Johny, 1 -> first, 2 -> second)
+
+
+scala> List(1 -> "first", 2 -> "second").foldLeft(Map.empty[Int,String]){ case(x,(k,v)) => x + (k -> v) }
+res79: scala.collection.immutable.Map[Int,String] = Map(1 -> first, 2 -> second)
+
+
+scala> val aList = List(1,2,3)
+aList: List[Int] = List(1, 2, 3)
+
+scala> aList.foldLeft(0)(_+_)
+res73: Int = 6
+
+
+
+
+10. Maps
+
+
+-- Sample code to illustrate Map
+
+object test extends App{
+
+  val initialMap : Map[Int,String] = Map(1 -> "first", 2 -> "second")
+
+  def abbreviate : (Int,String) => (Int,String) ={
+    case(key,value) =>
+      val newValue = key + value.takeRight(2)
+      key -> newValue
+  }
+  
+  println(initialMap.map( x => abbreviate(x._1,x._2)))
+
+}
+
+
+-Few more syntactic sugar --
+
+scala> val newMap : Map[Int,Int] = m map {case(_,v) => (1,v.length)}
+newMap: Map[Int,Int] = Map(1 -> 2)
+
+scala> val newMap : Map[String,Int] = m map { case(k,v) => (k.toString,v.length)}
+newMap: Map[String,Int] = Map(1 -> 1, 2 -> 2)
+
+
+
+
+11. MapValues
+
+val initialMap : Map[Int,String] = Map(1 -> "first", 2 -> "second")
+
+
+scala> val reverse: String => String = value => value.reverse
+reverse: String => String = $Lambda$2560/0x0000000800f9d040@268c650d
+
+
+val reversed = initialMap.mapValues(reverse).view.force
+println(reversed)
+Vector((1,tsrif), (2,dnoces))
+
+scala> val reversed: Map[Int, String] = initialMap.mapValues(reverse)
+reversed: Map[Int,String] = Map(1 -> tsrif, 2 -> dnoces)
+  
+--Use case of mapView and force after mapValues to call MapValues on all values
+
+val initialMap : Map[Int,String] = Map(1 -> "first", 2 -> "second")
+
+
+val counter = new AtomicInteger()
+  val reverse : String => String = { x =>
+    counter.incrementAndGet()
+    x.reverse
+  }
+
+val reversed = initialMap.mapValues(reverse).view.force
+println(reversed)
+println(counter.get())
+
+Vector((1,tsrif), (2,dnoces))
+2
+
+
+12. filter 
+
+val predicate : ((Int,String)) => Boolean ={
+    case(key,value) => key > 1 && value.length > 5
+  }
+
+val filtered : Map[Int,String] = initialMap.filter(predicate)
+println(filtered)
+
+Map(2 -> second)
+
+
+13. filterKeys
+
+val predicateKey : Int => Boolean = key => key > 1
+val result : Map[Int,String] = initialMap.view.filterKeys(predicateKey).toMap
+println(result)
+
+Vector((2,second))
+
+14. flatMap
+
+  val m = Map(1 -> "A", 2 -> "B", 3 -> "C")
+  val newMap : Map[Int,String] = m flatMap  {
+    case(k,v) => (1 to k).map(i => i -> s"$i$v")
+  }
+  println(newMap)
+  
+  
+15. transform 
+
+scala> val newMap : Map[Int,String] = m transform{case(k,v) => s"$k$v"}
+newMap: Map[Int,String] = Map(1 -> 1A, 2 -> 2B, 3 -> 3C)
+
+mapValues can access valus of Map ,transform can access both keys and valus
 
 
