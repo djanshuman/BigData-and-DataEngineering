@@ -526,7 +526,7 @@ Vector((2,second))
   val newMap : Map[Int,String] = m flatMap  {
     case(k,v) => (1 to k).map(i => i -> s"$i$v")
   }
-  println(newMap)
+  println(newMap) //Map(1 -> 1C, 2 -> 2C, 3 -> 3C)
   
   
 15. transform 
