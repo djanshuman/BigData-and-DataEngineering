@@ -1,3 +1,4 @@
+
 1.For Comprehension for chaining Map and flatMap for concise code.
 
 for {
@@ -178,3 +179,112 @@ scala> Map(1 -> "a", 2 -> "b", 3 -> "c").foreach(elem => println(s"The Value of 
 The Value of key 2 is b
 The Value of key 1 is a
 The Value of key 3 is c
+
+
+6. Shuffle Collections in Scala
+https://www.baeldung.com/scala/shuffle-list-map-set
+
+-- List
+scala> import scala.util.Random
+import scala.util.Random
+
+scala> val aList : List[Int] = List(10,2,4,5)
+aList: List[Int] = List(10, 2, 4, 5)
+
+scala> Random.shuffle(aList)
+res103: List[Int] = List(2, 10, 5, 4)
+
+scala> Random.shuffle(aList)
+res104: List[Int] = List(2, 10, 4, 5)
+
+scala> Random.shuffle(aList)
+res105: List[Int] = List(4, 5, 2, 10)
+
+
+-- Seq
+
+scala> val bSeq : Seq[Int] = Seq(90,80,65,60)
+bSeq: Seq[Int] = List(90, 80, 65, 60)
+
+scala> Random.shuffle(bSeq)
+res107: Seq[Int] = List(60, 80, 65, 90)
+
+scala> Random.shuffle(bSeq)
+res108: Seq[Int] = List(90, 60, 80, 65)
+
+scala> Random.shuffle(bSeq)
+res109: Seq[Int] = List(80, 90, 65, 60)
+
+scala> Random.shuffle(bSeq)
+res110: Seq[Int] = List(80, 65, 90, 60)
+
+
+-- Map 
+
+scala> val aMap : Map[Char,Int] = Map('A' -> 10 , 'B' -> 20 , 'C' -> 100)
+aMap: scala.collection.mutable.Map[Char,Int] = Map(A -> 10, C -> 100, B -> 20)
+
+scala> Random.shuffle(aMap)
+res111: scala.collection.mutable.Iterable[(Char, Int)] = ArrayBuffer((B,20), (A,10), (C,100))
+
+scala> Random.shuffle(aMap)
+res114: scala.collection.mutable.Iterable[(Char, Int)] = ArrayBuffer((A,10), (C,100), (B,20))
+
+scala> Random.shuffle(aMap)
+res115: scala.collection.mutable.Iterable[(Char, Int)] = ArrayBuffer((C,100), (A,10), (B,20))
+
+
+-- Set 
+
+scala> val x = Set(80,55,77,33)
+x: scala.collection.immutable.Set[Int] = Set(80, 55, 77, 33)
+
+scala> Random.shuffle(x)
+res137: scala.collection.immutable.Set[Int] = Set(77, 33, 55, 80)
+
+scala> Random.shuffle(x)
+res138: scala.collection.immutable.Set[Int] = Set(55, 33, 80, 77)
+
+scala> Random.shuffle(x)
+res139: scala.collection.immutable.Set[Int] = Set(77, 55, 80, 33)
+
+7. Merge Two Maps in Scala
+
+https://www.baeldung.com/scala/merge-two-maps
+
+scala> val firstMap = Map(1 -> "Apple", 5 -> "Banana", 3 -> "Orange");
+firstMap: scala.collection.mutable.Map[Int,String] = Map(5 -> Banana, 1 -> Apple, 3 -> Orange)
+
+scala> val secondMap = Map(5 -> "Pear", 4 -> "Cherry");
+secondMap: scala.collection.mutable.Map[Int,String] = Map(5 -> Pear, 4 -> Cherry)
+
+scala> firstMap ++ secondMap
+res149: scala.collection.mutable.Map[Int,String] = Map(5 -> Pear, 4 -> Cherry, 1 -> Apple, 3 -> Orange)
+
+If both collection has same key then ++ will only preserve values from second collection/Map
+
+
+-- Use case 1 where values are not iterables --
+
+val duplicateMap = for {
+(k1,v1) <- firstMap
+(k2,v2) <- secondMap
+if(k1 == k2)
+} yield (k1,(v1,v2))
+
+
+scala> val duplicateMap = for {
+     | (k1,v1) <- firstMap
+     | (k2,v2) <- secondMap
+     | if(k1 == k2)
+     | } yield (k1,(v1,v2))
+duplicateMap: scala.collection.mutable.Map[Int,(String, String)] = Map(5 -> (Banana,Pear))
+
+scala> duplicateMap
+res164: scala.collection.mutable.Map[Int,(String, String)] = Map(5 -> (Banana,Pear))
+
+
+scala> val combinedMap = firstMap ++ secondMap ++ duplicateMap
+combinedMap: scala.collection.mutable.Map[Int,java.io.Serializable] = Map(5 -> (Banana,Pear), 4 -> Cherry, 1 -> Apple, 3 -> Orange)
+
+-- Use case 2 where values are iterables --
