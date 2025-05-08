@@ -1,4 +1,5 @@
 
+
 1.For Comprehension for chaining Map and flatMap for concise code.
 
 for {
@@ -288,3 +289,27 @@ scala> val combinedMap = firstMap ++ secondMap ++ duplicateMap
 combinedMap: scala.collection.mutable.Map[Int,java.io.Serializable] = Map(5 -> (Banana,Pear), 4 -> Cherry, 1 -> Apple, 3 -> Orange)
 
 -- Use case 2 where values are iterables --
+
+
+def combineIterables[K,V](a: Map[K,Iterable[V]] , b: Map[K,Iterable[V]]) : Map [K, Iterable[V]] = {
+	a ++ b.map{
+	case (k,v) => k -> (v ++ a.getOrElse(k,Iterable.empty))}
+}
+
+
+scala> val firstMap = Map(1 -> List(1,2,3))
+firstMap: scala.collection.immutable.Map[Int,List[Int]] = Map(1 -> List(1, 2, 3))
+
+scala> val secondMap = Map(1 -> List(4,5))
+secondMap: scala.collection.immutable.Map[Int,List[Int]] = Map(1 -> List(4, 5))
+
+
+scala> def combineIterables[K,V](a: Map[K,Iterable[V]] , b: Map[K,Iterable[V]]) : Map [K, Iterable[V]] = {
+     |   a ++ b.map{
+     |   case (k,v) => k -> (v ++ a.getOrElse(k,Iterable.empty))}
+     | }
+combineIterables: [K, V](a: Map[K,Iterable[V]], b: Map[K,Iterable[V]])Map[K,Iterable[V]]
+
+
+scala> val mergedMap = combineIterables[Int, Int](firstMap, secondMap)
+mergedMap: Map[Int,Iterable[Int]] = Map(1 -> List(4, 5, 1, 2, 3))
