@@ -149,3 +149,21 @@ Notes
 Reason for doing this , ID 3 was max score in exam 10 but in other exam id , it was not part of max or min, however we cannot consider it as it was max or min at least once.
 
 '''
+
+# Solution -2 (More concise)
+
+-- Write your PostgreSQL query statement below
+with ranking as (
+select
+    e.student_id,
+    s.student_name,
+    e.score,
+    rank() over (partition by exam_id order by score) as rank_asc,
+    rank() over (partition by exam_id order by score desc) as rank_desc
+    from Exam e inner join Student s on s.student_id = e.student_id)
+    select  
+        student_id,student_name
+        from ranking
+        group by student_id,student_name
+        having min(rank_asc) > 1 and min(rank_desc) > 1 
+        order by 1;
