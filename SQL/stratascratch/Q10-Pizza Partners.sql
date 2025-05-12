@@ -43,7 +43,7 @@ id	name	timezone
 postmates_partners:
 
 id	name	category
-71	Papa John's	Pizza
+71	Papa Johns	Pizza
 75	Domino's Pizza	Pizza
 77	Pizza Hut	Pizza
 79	Papa Murphy's	Pizza
