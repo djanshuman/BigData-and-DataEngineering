@@ -93,3 +93,22 @@ T3	67.12
 T4	17.36
 T5	6.07
 '''
+
+-- approach 2 --
+
+with summary as (
+select
+    mcp.territory_id,
+    extract( quarter from f.order_date) as "quarterly",
+    sum(f.order_value) as "sales_worth"
+    from fct_customer_sales f inner join map_customer_territory mcp
+    on f.cust_id = mcp.cust_id
+    and extract( quarter from f.order_date) in (3,4)
+    and extract( year from f.order_date) = '2021'
+    group by 1,2)
+select
+    a.territory_id,
+    (b.sales_worth - a.sales_worth)/a.sales_worth * 100 as "sales_growth"
+    from summary a inner join summary b 
+    on a.territory_id = b.territory_id
+    and a.quarterly < b.quarterly 
