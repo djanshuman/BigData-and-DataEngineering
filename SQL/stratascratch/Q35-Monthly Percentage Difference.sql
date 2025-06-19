@@ -19,3 +19,26 @@ select
         year_month,
         round((((current_mon_revenue - previous_month_revenue) / previous_month_revenue)*100),2) as revenue_diff_pct
         from cte;
+
+
+--approach 2 --
+with mom_tot_revenue as (
+SELECT
+    TO_CHAR(CREATED_AT::DATE , 'YYYY-MM') AS "year_month",
+    SUM(value) as "total_revenue"
+    FROM sf_transactions
+    group by 1),
+    
+mom_revenue as (
+select
+    year_month,
+    total_revenue as "curr_month_rev",
+    lag(total_revenue) over (order by year_month) as "prev_month_rev"
+    from mom_tot_revenue)
+    
+select
+    year_month,
+    round(100*(curr_month_rev - prev_month_rev)/prev_month_rev,2) as "revenue_diff_pct"
+    from mom_revenue
+    order by 1;
+    
