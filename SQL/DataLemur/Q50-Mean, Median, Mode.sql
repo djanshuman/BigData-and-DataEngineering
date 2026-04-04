@@ -27,15 +27,56 @@ The median is the middle value of the ordered dataset. When the data is arranged
 
 The dataset you are querying against may have different input & output - this is just an example!
 """
+
+'''
+  Solution 
+Clean solution without using built-in function. Also handles odd and even cases. Note : If question asks for exact median value present in dataset then below changes are needed, avg() not required and (total_count + 1) / 2 handles both odd and even cases.
+
+  median_cte as (
+select 
+   email_count as median 
+   from ranked
+   where rn in (
+      (total_count + 1) / 2 
+   )),
+  
+  '''
+  
+
+Current Question solution
+
+
+-- Getting interpolated median --
+with ranked as (
+SELECT 
+  email_count,
+  row_number () over (order by email_count) as rn,
+  count(*) over () as total_count
+  FROM inbox_stats),
+
+median_cte as (
+select 
+   ROUND(avg(email_count),0) as median -- for even, avg of middle two values
+   from ranked
+   where rn in (
+      (total_count + 1) / 2 , -- odd number of elements. In case of odd, both values will be same
+      (total_count + 2) / 2 -- even number of elements 
+   )),
+-- Getting mode --
+mode_cte as(
+select 
+      email_count as mode
+      from  (
+SELECT 
+  email_count,
+  rank () over (order by count(*) desc) as rn
+  FROM inbox_stats
+  group by email_count) a where rn = 1)
+
+-- final select --
+
 SELECT
-  round(avg(email_count),0) as "mean",
-  percentile_cont(0.5) within group(order by email_count) as "median",
-  MODE() WITHIN GROUP(ORDER BY email_count) as "mode"
+  ROUND(avg(email_count),0) AS MEAN,
+  (SELECT median from median_cte),
+  (SELECT mode from mode_cte)
   from inbox_stats;
-
-"""
-Output
-
-mean	median	mode
-298	175	200
-"""
