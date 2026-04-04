@@ -80,3 +80,10 @@ SELECT
   (SELECT median from median_cte),
   (SELECT mode from mode_cte)
   from inbox_stats;
+
+
+'''
+  Output
+mean	median	mode
+298	175	200
+  '''
