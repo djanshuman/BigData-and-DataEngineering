@@ -51,22 +51,33 @@ user_id
 6
 """
 
-
-
-with cte as (
+WITH deduped AS (
 SELECT 
   user_id,
-  extract(year from filing_date) as curr_year,
-  lag(extract(year from filing_date)) over (partition by user_id order by extract(year from filing_date)) as prev_year,
-  lead(extract(year from filing_date)) over (partition by user_id order by extract(year from filing_date)) as next_year,
-  count(filing_id) 
-FROM filed_taxes where lower(product) like '%turbotax%'
-group by 1, 2
-having count(filing_id) = 1)
+  extract(year from filing_date) as curr_year
+  FROM filed_taxes where lower(product) like '%turbotax%'
+  group by 1,2),
 
+cte as (
+select 
+  user_id,
+  curr_year,
+  lag(curr_year) over (partition by user_id order by curr_year) as prev_year,
+  lead(curr_year) over (partition by user_id order by curr_year) as next_year
+  from deduped)
+  
 select 
   DISTINCT user_id
   from cte 
   where prev_year = curr_year - 1 and 
   next_year = curr_year + 1
   order by 1;
+    
+
+  
+  
+  
+  
+  
+  
+  
