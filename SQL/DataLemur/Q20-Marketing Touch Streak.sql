@@ -84,3 +84,24 @@ email
 andy.markus@att.net
 john.doe@datascience.com
 """
+
+
+
+WITH cte AS (
+  SELECT
+    m.contact_id,
+    event_date,
+    event_type,
+    DATE_TRUNC('week', event_date) AS curr_week,
+    LAG(DATE_TRUNC('week', event_date))  OVER (PARTITION BY m.contact_id ORDER BY event_date) AS prev_week,
+    LEAD(DATE_TRUNC('week', event_date)) OVER (PARTITION BY m.contact_id ORDER BY event_date) AS next_week
+  FROM marketing_touches m
+)
+SELECT DISTINCT email
+FROM cte t inner join crm_contacts c ON t.contact_id = c.contact_id
+WHERE prev_week = curr_week - INTERVAL '1 week'
+  AND next_week = curr_week + INTERVAL '1 week' 
+  AND t.contact_id in (
+        select contact_id from marketing_touches where event_type = 'trial_request'
+  )
+ORDER BY 1;
