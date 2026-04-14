@@ -50,3 +50,23 @@ user_id
 5
 6
 """
+
+
+
+with cte as (
+SELECT 
+  user_id,
+  extract(year from filing_date) as curr_year,
+  lag(extract(year from filing_date)) over (partition by user_id order by extract(year from filing_date)) as prev_year,
+  lead(extract(year from filing_date)) over (partition by user_id order by extract(year from filing_date)) as next_year,
+  count(filing_id) 
+FROM filed_taxes where lower(product) like '%turbotax%'
+group by 1, 2
+having count(filing_id) = 1)
+
+select 
+  DISTINCT user_id
+  from cte 
+  where prev_year = curr_year - 1 and 
+  next_year = curr_year + 1
+  order by 1;
